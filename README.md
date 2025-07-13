@@ -1,18 +1,24 @@
-# ASR Readme
+# LIRA
 
 ## Objective
 
 This repository is ongoing work to build, track, and experiment with lightweight ASR (Automatic Speech Recognition) projects, focusing on efficient deployment and rapid prototyping using models optimized for Ryzen AI (RAI).
+## Setup
 
 ## Main Options
-
+```sh
+conda activate ryzen-ai-1.5.0
+git clone https://github.com/aigdat/LIRA.git
+cd LIRA
+pip install -e .
+```
 ### 1. Quick CLI Tool
 
-The `run_dual.py` script provides a simple command-line interface for running ASR tasks. It supports both `zipformer` and `whisper` model architectures, using models from Hugging Face that are cached locally for speed. You can process audio from files or (experimentally) from a microphone.
+The `run_asr.py` script provides a simple command-line interface for running ASR tasks. It supports both `zipformer` and `whisper` model architectures, using models from Hugging Face that are cached locally for speed. You can process audio from files or (experimentally) from a microphone.
 
 **Example usage:**
 ```sh
-python run_dual.py --encoder <encoder.onnx> --decoder <decoder.onnx> --joiner <joiner.onnx> --tokens <tokens.txt> --input <audio.wav|mic> --duration <seconds> --model-type <zipformer|whisper> --device <cpu|npu>
+run_asr.py --encoder <encoder.onnx> --decoder <decoder.onnx> --joiner <joiner.onnx> --tokens <tokens.txt> --input <audio.wav|mic> --duration <seconds> --model-type <zipformer|whisper> --device <cpu|npu>
 ```
 
 ### 2. Live Demo App
@@ -26,7 +32,7 @@ A Gradio-based demo app is included for interactive ASR testing. You can upload 
 These tools enable fast experimentation and deployment of ASR models tailored for RAI.
 
 ```bash
-(ryzen-ai-1.4.0ga) C:\Users\ISWAALEX\asr>python main.py
+(ryzen-ai-1.4.0ga) C:\Users\ISWAALEX\LIRA>python main.py
 
 * Running on local URL:  http://127.0.0.1:7860
 * To create a public link, set `share=True` in `launch()`.
