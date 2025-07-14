@@ -57,23 +57,31 @@ def get_model_providers(model_type, device, config_path="model_config.json"):
     Determines the appropriate providers for the given model type and device using a JSON configuration.
 
     Args:
-        model_type (str): The model type ('zipformer' or 'whisper').
+        model_type (str): The model type (e.g., 'zipformer', 'whisper-base', 'whisper-small', 'whisper-medium').
         device (str): The target device ('cpu', 'npu').
         config_path (str): Path to the JSON configuration file.
 
     Returns:
         dict: A dictionary containing the providers for the model components.
     """
-    # Load configuration from JSON file
     with open(config_path, "r") as f:
         config = json.load(f)
 
-    if model_type not in config or device not in config[model_type]:
-        raise ValueError(f"Configuration for model '{model_type}' and device '{device}' not found.")
+    model_type_parts = model_type.split('-')
+    base_model_type = model_type_parts[0]
+    sub_model_type = model_type_parts[1] if len(model_type_parts) > 1 else None
 
-    device_config = config[model_type][device]
+    if base_model_type not in config:
+        raise ValueError(f"Configuration for base model '{base_model_type}' not found.")
+
+    if sub_model_type:
+        if sub_model_type not in config[base_model_type]:
+            raise ValueError(f"Configuration for sub-model '{sub_model_type}' under '{base_model_type}' not found.")
+        device_config = config[base_model_type][sub_model_type].get(device, {})
+    else:
+        device_config = config[base_model_type].get(device, {})
+
     providers = {}
-
     for component, settings in device_config.items():
         if settings.get("cache_key") and settings.get("cache_dir") and settings.get("config_file"):
             providers[component] = get_providers(

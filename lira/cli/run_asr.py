@@ -28,14 +28,12 @@ def main():
     parser.add_argument("--model-dir", required=True, help="Path to local model directory or HF repo name")
     parser.add_argument("--duration", type=int, default=0, help="Duration for mic input (seconds)")
     parser.add_argument("--device", choices=['cpu', 'npu'], default='cpu', help="Target device")
-    parser.add_argument("--model-type", choices=['zipformer', 'whisper'], required=True, help="Model type")
+    parser.add_argument("--model-type", choices=['zipformer', 'whisper-base', 'whisper-small', 'whisper-medium'], required=True, help="Model type")
     parser.add_argument("--config-path", type=str, default="model_config.json", help="Path to the JSON configuration file")
     args = parser.parse_args()
 
-    # Resolve model directory
     model_dir = get_model_dir(args.model_dir)
 
-    # Get providers for the model
     providers = get_model_providers(
         args.model_type,
         args.device,
@@ -51,12 +49,13 @@ def main():
         def transcribe_fn(audio, state):
             features = extract_fbank(audio)
             return greedy_search(encoder, decoder, joiner, features, tokens, state)
-    else:
+    elif args.model_type.startswith("whisper"):
         whisper_model = WhisperONNX(
             str(model_dir / "whisper-encoder.onnx"),
             str(model_dir / "whisper-decoder.onnx"),
             encoder_provider=providers["encoder"],
-            decoder_provider=providers["decoder"]
+            decoder_provider=providers["decoder"],
+            model_type=args.model_type
         )
 
         def transcribe_fn(audio, state):
@@ -69,18 +68,17 @@ def main():
         if sr != SAMPLE_RATE:
             waveform = torchaudio.transforms.Resample(orig_freq=sr, new_freq=SAMPLE_RATE)(waveform)
         audio = waveform.squeeze(0).numpy()
-        audio_duration = len(audio) / SAMPLE_RATE  # Calculate audio duration in seconds
+        audio_duration = len(audio) / SAMPLE_RATE 
         state = {}
 
-        start_time = time.time()  # Start timing
+        start_time = time.time()
         text = transcribe_fn(audio, state)
-        end_time = time.time()  # End timing
+        end_time = time.time()
 
         transcription_time = end_time - start_time
-        rtf = transcription_time / audio_duration  # Calculate RTF
+        rtf = transcription_time / audio_duration 
 
         print("\n🗣️ Transcription:", text)
-        print(f"⏱️ RTF Performance: {rtf:.4f}")  # Print RTF
-
+        print(f"⏱️ RTF Performance: {rtf:.4f}")
 if __name__ == "__main__":
     main()
