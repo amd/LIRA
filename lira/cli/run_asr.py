@@ -2,9 +2,10 @@ import argparse
 import json
 import numpy as np
 import torchaudio
-import time  # Add this import
+import time
+import os
 from pathlib import Path
-from transformers import WhisperFeatureExtractor, WhisperTokenizer
+from huggingface_hub import snapshot_download
 from lira.whisper.transcribe import WhisperONNX
 from lira.zipformer.transcribe import EncoderWrapper, DecoderWrapper, JoinerWrapper
 from lira.utils.audio import extract_fbank, greedy_search, mic_stream, get_model_providers
@@ -12,21 +13,27 @@ from lira.utils.tokens import load_tokens
 
 SAMPLE_RATE = 16000
 
+def get_model_dir(model_dir):
+    """
+    Resolves the model directory. If the input is an HF repo name, downloads the model.
+    """
+    if not os.path.exists(model_dir):
+        print(f"⏳ Downloading model from Hugging Face: {model_dir}")
+        model_dir = snapshot_download(repo_id=model_dir, cache_dir="./hf_models")
+    return Path(model_dir)
 
-
-# ---------------- Main ---------------- #
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True, help="WAV file path or 'mic'")
-    parser.add_argument("--encoder", required=True)
-    parser.add_argument("--decoder", required=True)
-    parser.add_argument("--joiner")
-    parser.add_argument("--tokens")
-    parser.add_argument("--duration", type=int, default=0)
-    parser.add_argument("--device", choices=['cpu', 'npu'], default='cpu')
-    parser.add_argument("--model-type", choices=['zipformer', 'whisper'], required=True)
+    parser.add_argument("--model-dir", required=True, help="Path to local model directory or HF repo name")
+    parser.add_argument("--duration", type=int, default=0, help="Duration for mic input (seconds)")
+    parser.add_argument("--device", choices=['cpu', 'npu'], default='cpu', help="Target device")
+    parser.add_argument("--model-type", choices=['zipformer', 'whisper'], required=True, help="Model type")
     parser.add_argument("--config-path", type=str, default="model_config.json", help="Path to the JSON configuration file")
     args = parser.parse_args()
+
+    # Resolve model directory
+    model_dir = get_model_dir(args.model_dir)
 
     # Get providers for the model
     providers = get_model_providers(
@@ -36,18 +43,18 @@ def main():
     )
 
     if args.model_type == "zipformer":
-        encoder = EncoderWrapper(args.encoder, providers=providers["encoder"])
-        decoder = DecoderWrapper(args.decoder, providers=providers["decoder"])
-        joiner = JoinerWrapper(args.joiner, providers=providers["joiner"])
-        tokens = load_tokens(args.tokens)
+        encoder = EncoderWrapper(str(model_dir / "encoder.onnx"), providers=providers["encoder"])
+        decoder = DecoderWrapper(str(model_dir / "decoder.onnx"), providers=providers["decoder"])
+        joiner = JoinerWrapper(str(model_dir / "joiner.onnx"), providers=providers["joiner"])
+        tokens = load_tokens(str(model_dir / "tokens.txt"))
 
         def transcribe_fn(audio, state):
             features = extract_fbank(audio)
             return greedy_search(encoder, decoder, joiner, features, tokens, state)
     else:
         whisper_model = WhisperONNX(
-            args.encoder,
-            args.decoder,
+            str(model_dir / "whisper-encoder.onnx"),
+            str(model_dir / "whisper-decoder.onnx"),
             encoder_provider=providers["encoder"],
             decoder_provider=providers["decoder"]
         )
@@ -73,7 +80,6 @@ def main():
         rtf = transcription_time / audio_duration  # Calculate RTF
 
         print("\n🗣️ Transcription:", text)
-        
         print(f"⏱️ RTF Performance: {rtf:.4f}")  # Print RTF
 
 if __name__ == "__main__":

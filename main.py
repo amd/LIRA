@@ -4,6 +4,7 @@ import torchaudio
 import torch
 import numpy as np
 from pathlib import Path
+from huggingface_hub import snapshot_download
 
 from lira.zipformer.transcribe import EncoderWrapper, DecoderWrapper, JoinerWrapper
 from lira.whisper.transcribe import WhisperONNX
@@ -22,9 +23,9 @@ def download_and_prepare_models(model_type, target_device, config_path="config/m
     )
 
     if model_type == "whisper":
-        model_dir = Path("./models")
-        encoder_path = model_dir / "whisper-encoder.onnx"
-        decoder_path = model_dir / "whisper-decoder.onnx"
+        model_dir = snapshot_download(repo_id="aigdat/AMD-Whisper-Base", cache_dir="./hf_models")
+        encoder_path = str(Path(model_dir / "whisper-encoder.onnx"))
+        decoder_path = str(Path(model_dir / "whisper-decoder.onnx"))
         whisper_model = WhisperONNX(
             str(encoder_path),
             str(decoder_path),
@@ -34,12 +35,12 @@ def download_and_prepare_models(model_type, target_device, config_path="config/m
         return {"model": whisper_model}
 
     elif model_type == "zipformer":
-        model_dir = Path("C:\\Users\\ISWAALEX\\DAToolkit\\sandbox\\asr_sandbox")
-        encoder = EncoderWrapper(str(model_dir / "encoder.onnx"), providers=providers["encoder"])
-        decoder = DecoderWrapper(str(model_dir / "decoder.onnx"), providers=providers["decoder"])
-        joiner = JoinerWrapper(str(model_dir / "joiner.onnx"), providers=providers["joiner"])
+        model_dir = snapshot_download(repo_id="aigdat/AMD-zipformer-en", cache_dir="./hf_models")
+        encoder = EncoderWrapper(str(Path(model_dir) / "encoder.onnx"), providers=providers["encoder"])
+        decoder = DecoderWrapper(str(Path(model_dir) / "decoder.onnx"), providers=providers["decoder"])
+        joiner = JoinerWrapper(str(Path(model_dir) / "joiner.onnx"), providers=providers["joiner"])
         tokens = []
-        with open(model_dir / "tokens.txt", 'r', encoding='utf-8') as f:
+        with open(Path(model_dir) / "tokens.txt", 'r', encoding='utf-8') as f:
             tokens = [line.strip().split()[0] for line in f]
         return {"encoder": encoder, "decoder": decoder, "joiner": joiner, "tokens": tokens}
 
@@ -48,7 +49,10 @@ def download_and_prepare_models(model_type, target_device, config_path="config/m
 
 
 def transcribe_audio(audio, model_type, target_device, duration=5):
+    with gr.Row():
+        status = gr.Textbox(value="⏳ Downloading and preparing model...", visible=True, interactive=False)
     models = download_and_prepare_models(model_type, target_device)
+    status.value = "✅ Model ready!"
 
     if isinstance(audio, np.ndarray):
         # Mic input from Gradio
