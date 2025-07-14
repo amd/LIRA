@@ -8,27 +8,36 @@ from pathlib import Path
 from lira.zipformer.transcribe import EncoderWrapper, DecoderWrapper, JoinerWrapper
 from lira.whisper.transcribe import WhisperONNX
 from lira.utils.audio import extract_fbank
-from lira.utils.audio import get_providers
+from lira.utils.audio import get_model_providers
 from lira.cli.run_asr import greedy_search, mic_stream
 
 SAMPLE_RATE = 16000
 
 
-def download_and_prepare_models(model_type, target_device):
-    providers = get_providers(target_device)
+def download_and_prepare_models(model_type, target_device, config_path="config/model_config.json"):
+    providers = get_model_providers(
+        model_type=model_type,
+        device=target_device,
+        config_path=config_path
+    )
 
     if model_type == "whisper":
         model_dir = Path("./models")
         encoder_path = model_dir / "whisper-encoder.onnx"
         decoder_path = model_dir / "whisper-decoder.onnx"
-        whisper_model = WhisperONNX(str(encoder_path), str(decoder_path), providers=providers)
+        whisper_model = WhisperONNX(
+            str(encoder_path),
+            str(decoder_path),
+            encoder_provider=providers["encoder"],
+            decoder_provider=providers["decoder"]
+        )
         return {"model": whisper_model}
 
     elif model_type == "zipformer":
         model_dir = Path("C:\\Users\\ISWAALEX\\DAToolkit\\sandbox\\asr_sandbox")
-        encoder = EncoderWrapper(str(model_dir / "encoder.onnx"), providers=providers)
-        decoder = DecoderWrapper(str(model_dir / "decoder.onnx"), providers=providers)
-        joiner = JoinerWrapper(str(model_dir / "joiner.onnx"), providers=providers)
+        encoder = EncoderWrapper(str(model_dir / "encoder.onnx"), providers=providers["encoder"])
+        decoder = DecoderWrapper(str(model_dir / "decoder.onnx"), providers=providers["decoder"])
+        joiner = JoinerWrapper(str(model_dir / "joiner.onnx"), providers=providers["joiner"])
         tokens = []
         with open(model_dir / "tokens.txt", 'r', encoding='utf-8') as f:
             tokens = [line.strip().split()[0] for line in f]

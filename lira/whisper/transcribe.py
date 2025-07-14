@@ -5,9 +5,9 @@ from transformers import WhisperFeatureExtractor, WhisperTokenizer
 SAMPLE_RATE = 16000
 
 class WhisperONNX:
-    def __init__(self, encoder_path, decoder_path, providers=None):
-        self.encoder = ort.InferenceSession(encoder_path, providers=providers)
-        self.decoder = ort.InferenceSession(decoder_path, providers=providers)
+    def __init__(self, encoder_path, decoder_path, encoder_provider, decoder_provider):
+        self.encoder = ort.InferenceSession(encoder_path, providers=encoder_provider)
+        self.decoder = ort.InferenceSession(decoder_path, providers=decoder_provider)
         self.feature_extractor = WhisperFeatureExtractor.from_pretrained("openai/whisper-base")
         self.tokenizer = WhisperTokenizer.from_pretrained("openai/whisper-base")
         self.decoder_start_token = self.tokenizer.pad_token_id
