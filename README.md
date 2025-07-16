@@ -27,6 +27,7 @@ The `run_asr` script provides a simple command-line interface for running ASR ta
 
 **Example usage:**
 ```sh
+`model-dir` structure: refer to HF Repos above
 run_asr --model-dir <HF Repo-id|path/to/local/model/dir> --input <audio.wav|mic> --duration <seconds> --model-type <zipformer|whisper> --device <cpu|npu>
 ```
 Note:
