@@ -26,10 +26,12 @@ Here are the models currently available for use with this tool:
 The `run_asr` script provides a simple command-line interface for running ASR tasks. It supports both `zipformer` and `whisper` model architectures, using models from Hugging Face that are cached locally for speed. You can process audio from files or (experimentally) from a microphone.
 
 **Example usage:**
+
 ```sh
-`model-dir` structure: refer to HF Repos above
 run_asr --model-dir <HF Repo-id|path/to/local/model/dir> --input <audio.wav|mic> --duration <seconds> --model-type <zipformer|whisper> --device <cpu|npu>
 ```
+`model-dir` structure: refer to HF Repos above
+
 Note:
 - Ensure you have access to aigdat HF repo https://huggingface.co/aigdat if you need to download exported models
 - If downloading and compiling for the first time, it takes ~15 minutes
