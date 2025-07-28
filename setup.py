@@ -13,6 +13,7 @@ setup(
         "torchaudio",
         "sounddevice",
         "transformers",
+        "soundfile",
         "gradio"
     ],
     python_requires=">=3.7",
