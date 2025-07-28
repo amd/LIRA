@@ -1,0 +1,19 @@
+{
+    "passes": [
+        {
+            "name": "init",
+            "plugin": "vaip-pass_init"
+        },
+        {
+            "name": "vaiml_partition",
+            "plugin": "vaip-pass_vaiml_partition",
+            "vaiml_config": {
+                "keep_outputs": false,
+                "optimize_level": 2,
+                "fe_experiment": "prefer-conv-to-gemm-conversion=1 enable-gather-elements-adf=1 enable-edge-reshape-unwrapping=0",
+                "preferred_data_storage": "unvectorized",
+                "threshold_gops_percent": 0
+            }
+        }
+    ]
+}

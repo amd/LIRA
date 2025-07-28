@@ -5,11 +5,11 @@ from transformers import WhisperFeatureExtractor, WhisperTokenizer
 SAMPLE_RATE = 16000
 
 class WhisperONNX:
-    def __init__(self, encoder_path, decoder_path, providers=None):
-        self.encoder = ort.InferenceSession(encoder_path, providers=providers)
-        self.decoder = ort.InferenceSession(decoder_path, providers=providers)
-        self.feature_extractor = WhisperFeatureExtractor.from_pretrained("openai/whisper-base")
-        self.tokenizer = WhisperTokenizer.from_pretrained("openai/whisper-base")
+    def __init__(self, encoder_path, decoder_path, encoder_provider, decoder_provider, model_type="whisper-base"):
+        self.encoder = ort.InferenceSession(encoder_path, providers=encoder_provider)
+        self.decoder = ort.InferenceSession(decoder_path, providers=decoder_provider)
+        self.feature_extractor = WhisperFeatureExtractor.from_pretrained(f"openai/{model_type}")
+        self.tokenizer = WhisperTokenizer.from_pretrained(f"openai/{model_type}")
         self.decoder_start_token = self.tokenizer.pad_token_id
         self.eos_token = self.tokenizer.eos_token_id
         self.max_length = 448

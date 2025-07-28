@@ -4,6 +4,7 @@ import os
 import queue
 import threading
 import numpy as np
+import json
 import sounddevice as sd
 
 BLANK_ID = 0
@@ -38,8 +39,8 @@ def get_providers(device, cache_key=None, cache_dir=None, config_file=None):
     """
     if device == "npu":
         assert cache_key is not None, "cache_key must not be None when device is 'npu'"
-        assert cache_dir is not None and isinstance(cache_dir, str), "cache_dir must be a valid path string when device is 'npu'"
-        assert config_file is not None and isinstance(config_file, str), "config_file must be a valid path string when device is 'npu'"
+        assert cache_dir is not None , "cache_dir must be a valid path string when device is 'npu'"
+        assert config_file is not None, "config_file must be a valid path string when device is 'npu'"
         assert os.path.exists(cache_dir), f"cache_dir '{cache_dir}' does not exist"
         assert os.path.exists(config_file), f"config_file '{config_file}' does not exist"
         return [
@@ -50,6 +51,49 @@ def get_providers(device, cache_key=None, cache_dir=None, config_file=None):
             })
         ]
     return ["CPUExecutionProvider"]
+
+def get_model_providers(model_type, device, config_path="model_config.json"):
+    """
+    Determines the appropriate providers for the given model type and device using a JSON configuration.
+
+    Args:
+        model_type (str): The model type (e.g., 'zipformer', 'whisper-base', 'whisper-small', 'whisper-medium').
+        device (str): The target device ('cpu', 'npu').
+        config_path (str): Path to the JSON configuration file.
+
+    Returns:
+        dict: A dictionary containing the providers for the model components.
+    """
+    with open(config_path, "r") as f:
+        config = json.load(f)
+
+    model_type_parts = model_type.split('-')
+    base_model_type = model_type_parts[0]
+    sub_model_type = model_type_parts[1] if len(model_type_parts) > 1 else None
+
+    if base_model_type not in config:
+        raise ValueError(f"Configuration for base model '{base_model_type}' not found.")
+
+    if sub_model_type:
+        if sub_model_type not in config[base_model_type]:
+            raise ValueError(f"Configuration for sub-model '{sub_model_type}' under '{base_model_type}' not found.")
+        device_config = config[base_model_type][sub_model_type].get(device, {})
+    else:
+        device_config = config[base_model_type].get(device, {})
+
+    providers = {}
+    for component, settings in device_config.items():
+        if settings.get("cache_key") and settings.get("cache_dir") and settings.get("config_file"):
+            providers[component] = get_providers(
+                "npu",
+                cache_key=settings["cache_key"],
+                cache_dir=settings["cache_dir"],
+                config_file=settings["config_file"]
+            )
+        else:
+            providers[component] = get_providers("cpu")
+
+    return providers
 
 def greedy_search(encoder, decoder, joiner, features, tokens, state):
     context_size = 2

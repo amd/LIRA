@@ -7,13 +7,14 @@ setup(
     author="Your Name",
     packages=find_packages(include=["lira", "lira.*"]),
     install_requires=[
-        "numpy",
-        "onnxruntime",
+        # "numpy",
+        # "onnxruntime",
         "torch",
         "torchaudio",
         "sounddevice",
         "transformers",
-        "soundfile"
+        "soundfile",
+        "gradio"
     ],
     python_requires=">=3.7",
     entry_points={

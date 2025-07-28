@@ -1,28 +1,32 @@
 import argparse
+import json
 import numpy as np
 import onnxruntime as ort
 import torchaudio
 import sounddevice as sd
 import queue
 import threading
+import time
 from transformers import WhisperFeatureExtractor, WhisperTokenizer
+from pathlib import Path
 
 SAMPLE_RATE = 16000
 CHUNK_SIZE = 1600  # 0.1 sec chunks
 
-class WhisperONNX:
-    def __init__(self, encoder_path, decoder_path, providers=None):
-        # Load ONNX encoder and decoder
-        self.encoder = ort.InferenceSession(encoder_path, providers=providers)
-        self.decoder = ort.InferenceSession(decoder_path, providers=providers)
 
-        # Hugging Face feature extractor & tokenizer
-        self.feature_extractor = WhisperFeatureExtractor.from_pretrained("openai/whisper-base")
-        self.tokenizer = WhisperTokenizer.from_pretrained("openai/whisper-base")
+class WhisperONNX:
+    def __init__(self, encoder_path, decoder_path, hf_model="openai/whisper-base",
+                 encoder_providers=None, decoder_providers=None):
+
+        self.encoder = ort.InferenceSession(encoder_path, providers=encoder_providers)
+        self.decoder = ort.InferenceSession(decoder_path, providers=decoder_providers)
+
+        self.feature_extractor = WhisperFeatureExtractor.from_pretrained(hf_model)
+        self.tokenizer = WhisperTokenizer.from_pretrained(hf_model)
 
         self.decoder_start_token = self.tokenizer.pad_token_id
         self.eos_token = self.tokenizer.eos_token_id
-        self.max_length = 448  # Decoder max token length
+        self.max_length = 448
 
     def preprocess(self, audio):
         """
@@ -42,9 +46,10 @@ class WhisperONNX:
         Greedy decode with fixed-length input_ids
         """
         tokens = [self.decoder_start_token]
-        for _ in range(100):
-            # Pad input_ids to (1, 448)
-            decoder_input = np.full((1, 448), self.eos_token, dtype=np.int64)
+        first_token_time = None  
+        for _ in range(self.max_length):
+            # Pad input_ids to (1, max_length)
+            decoder_input = np.full((1, self.max_length), self.eos_token, dtype=np.int64)
             decoder_input[0, :len(tokens)] = tokens
 
             outputs = self.decoder.run(None, {
@@ -52,21 +57,80 @@ class WhisperONNX:
                 "encoder_hidden_states": encoder_out
             })
             logits = outputs[0]
-            next_token = int(np.argmax(logits[0, len(tokens)-1]))  # Use current position logits
+            next_token = int(np.argmax(logits[0, len(tokens)-1])) 
+
+            if first_token_time is None:
+                first_token_time = time.time()
+
             if next_token == self.eos_token:
                 break
             tokens.append(next_token)
-        return tokens
+        return tokens, first_token_time
+
+    def transcribe(self, audio, chunk_length_s=30):
+        """
+        Full encode-decode pipeline with support for long-form transcription using chunking.
+        """
+        chunk_size = SAMPLE_RATE * chunk_length_s 
+        total_samples = len(audio)
+        transcription = []
+        total_start_time = time.time()
+
+        overlap = SAMPLE_RATE * 1
+        for start in range(0, total_samples, chunk_size - overlap):
+            end = min(start + chunk_size, total_samples)
+            audio_chunk = audio[start:end]
+
+            # Process the chunk
+            input_features = self.preprocess(audio_chunk)
+            encoder_out = self.encode(input_features)
+            tokens, first_token_time = self.decode(encoder_out)
+            transcription.append(self.tokenizer.decode(tokens, skip_special_tokens=True).strip())
+
+            print(f"\n🔹 Performance Metric (Chunk {start // chunk_size + 1}):")
+            print(f"   ⏱️ Time to First Token: {first_token_time - total_start_time:.2f} seconds")
+
+        total_end_time = time.time()
+        input_audio_duration = total_samples / SAMPLE_RATE
+        rtf = (total_end_time - total_start_time) / input_audio_duration
+
+        print(f"   ⏱️ Total RTF: {rtf:.2f}")
+
+        # Combine all transcriptions
+        return " ".join(transcription)
 
 
-    def transcribe(self, audio):
-        """
-        Full encode-decode pipeline
-        """
-        input_features = self.preprocess(audio)
-        encoder_out = self.encode(input_features)
-        tokens = self.decode(encoder_out)
-        return self.tokenizer.decode(tokens, skip_special_tokens=True).strip()
+def load_provider_options(config, model_name, device):
+    """
+    Load provider options for encoder and decoder from JSON config
+    """
+    model_key = model_name.split("-")[-1]  # e.g., whisper-base -> base
+    if model_key not in config["whisper"]:
+        raise ValueError(f"Model type '{model_key}' not found in config")
+
+    if device not in config["whisper"][model_key]:
+        raise ValueError(f"Device '{device}' not found in config for model type '{model_key}'")
+
+    model_config = config["whisper"][model_key][device]
+    encoder_opts = model_config["encoder"]
+    decoder_opts = model_config["decoder"]
+
+    def build_provider_opts(opts):
+        if opts.get("config_file"):
+            return [
+                (
+                    "VitisAIExecutionProvider",
+                    {
+                        "config_file": opts["config_file"],
+                        "cache_dir": opts.get("cache_dir", ""),
+                        "cache_key": opts.get("cache_key", "")
+                    }
+                )
+            ]
+        else:
+            return ["CPUExecutionProvider"]
+
+    return build_provider_opts(encoder_opts), build_provider_opts(decoder_opts)
 
 
 def mic_stream(model, duration=0):
@@ -99,7 +163,7 @@ def mic_stream(model, duration=0):
         try:
             chunk = q_audio.get(timeout=0.1).squeeze()
             buffer = np.concatenate((buffer, chunk))
-            if len(buffer) >= SAMPLE_RATE * 5:  # Process every 5 seconds
+            if len(buffer) >= SAMPLE_RATE * 5:  # Process every 2 seconds
                 text = model.transcribe(buffer)
                 print(text)
                 buffer = np.zeros((0,), dtype=np.float32)
@@ -112,23 +176,28 @@ def main():
     parser.add_argument("--input", required=True, help="WAV file path or 'mic'")
     parser.add_argument("--encoder", required=True, help="Path to Whisper encoder ONNX model")
     parser.add_argument("--decoder", required=True, help="Path to Whisper decoder ONNX model")
+    parser.add_argument("--hf_model", default="openai/whisper-base",
+                        help="Hugging Face model name (e.g., openai/whisper-small)")
+    parser.add_argument("--config-file", required=True, default="./config/model_config.json", help="Path to Model provider configs")
     parser.add_argument("--device", choices=['cpu', 'npu'], default='cpu')
     parser.add_argument("--duration", type=int, default=0, help="Mic duration in seconds (0 = unlimited)")
     args = parser.parse_args()
 
-    # Set ONNX Runtime providers
-    if args.device == 'cpu':
-        providers = ["CPUExecutionProvider"]
-
-    elif args.device == 'npu':
-        providers = ["VitisAIExecutionProvider"]
+    if Path(args.config_file).exists():
+        with open(args.config_file) as f:
+            model_config = json.load(f)
     else:
-        raise ValueError(f"Unknown device: {args.device}")
+        raise FileNotFoundError(f"Config file {args.config_file} not found")
 
-    # Load Whisper ONNX model
-    model = WhisperONNX(args.encoder, args.decoder, providers=providers)
+    encoder_providers, decoder_providers = load_provider_options(
+        model_config, args.hf_model, args.device
+    )
 
-    # Process input
+    model = WhisperONNX(args.encoder, args.decoder,
+                        hf_model=args.hf_model,
+                        encoder_providers=encoder_providers,
+                        decoder_providers=decoder_providers)
+
     if args.input.lower() == 'mic':
         mic_stream(model, args.duration)
     else:
@@ -136,7 +205,7 @@ def main():
         if sr != SAMPLE_RATE:
             waveform = torchaudio.transforms.Resample(orig_freq=sr, new_freq=SAMPLE_RATE)(waveform)
         audio = waveform.squeeze(0).numpy()
-        text = model.transcribe(audio)
+        text = model.transcribe(audio, chunk_length_s=30)
         print("\n🗣️ Transcription:", text)
 
 
