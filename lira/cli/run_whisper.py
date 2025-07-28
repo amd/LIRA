@@ -112,15 +112,14 @@ def main():
     parser.add_argument("--input", required=True, help="WAV file path or 'mic'")
     parser.add_argument("--encoder", required=True, help="Path to Whisper encoder ONNX model")
     parser.add_argument("--decoder", required=True, help="Path to Whisper decoder ONNX model")
-    parser.add_argument("--device", choices=['cpu', 'cuda', 'npu'], default='cpu')
+    parser.add_argument("--device", choices=['cpu', 'npu'], default='cpu')
     parser.add_argument("--duration", type=int, default=0, help="Mic duration in seconds (0 = unlimited)")
     args = parser.parse_args()
 
     # Set ONNX Runtime providers
     if args.device == 'cpu':
         providers = ["CPUExecutionProvider"]
-    elif args.device == 'cuda':
-        providers = ["CUDAExecutionProvider"]
+
     elif args.device == 'npu':
         providers = ["VitisAIExecutionProvider"]
     else:

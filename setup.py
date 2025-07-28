@@ -12,7 +12,8 @@ setup(
         "torch",
         "torchaudio",
         "sounddevice",
-        "transformers"
+        "transformers",
+        "soundfile"
     ],
     python_requires=">=3.7",
     entry_points={
