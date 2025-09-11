@@ -15,8 +15,14 @@ CHUNK_SIZE = 1600  # 0.1 sec chunks
 
 
 class WhisperONNX:
-    def __init__(self, encoder_path, decoder_path, hf_model="openai/whisper-base",
-                 encoder_providers=None, decoder_providers=None):
+    def __init__(
+        self,
+        encoder_path,
+        decoder_path,
+        hf_model="openai/whisper-base",
+        encoder_providers=None,
+        decoder_providers=None,
+    ):
 
         self.encoder = ort.InferenceSession(encoder_path, providers=encoder_providers)
         self.decoder = ort.InferenceSession(decoder_path, providers=decoder_providers)
@@ -32,7 +38,9 @@ class WhisperONNX:
         """
         Convert raw audio to Whisper log-mel spectrogram
         """
-        inputs = self.feature_extractor(audio, sampling_rate=SAMPLE_RATE, return_tensors="np")
+        inputs = self.feature_extractor(
+            audio, sampling_rate=SAMPLE_RATE, return_tensors="np"
+        )
         return inputs["input_features"]
 
     def encode(self, input_features):
@@ -46,18 +54,19 @@ class WhisperONNX:
         Greedy decode with fixed-length input_ids
         """
         tokens = [self.decoder_start_token]
-        first_token_time = None  
+        first_token_time = None
         for _ in range(self.max_length):
             # Pad input_ids to (1, max_length)
-            decoder_input = np.full((1, self.max_length), self.eos_token, dtype=np.int64)
-            decoder_input[0, :len(tokens)] = tokens
+            decoder_input = np.full(
+                (1, self.max_length), self.eos_token, dtype=np.int64
+            )
+            decoder_input[0, : len(tokens)] = tokens
 
-            outputs = self.decoder.run(None, {
-                "input_ids": decoder_input,
-                "encoder_hidden_states": encoder_out
-            })
+            outputs = self.decoder.run(
+                None, {"input_ids": decoder_input, "encoder_hidden_states": encoder_out}
+            )
             logits = outputs[0]
-            next_token = int(np.argmax(logits[0, len(tokens)-1])) 
+            next_token = int(np.argmax(logits[0, len(tokens) - 1]))
 
             if first_token_time is None:
                 first_token_time = time.time()
@@ -71,7 +80,7 @@ class WhisperONNX:
         """
         Full encode-decode pipeline with support for long-form transcription using chunking.
         """
-        chunk_size = SAMPLE_RATE * chunk_length_s 
+        chunk_size = SAMPLE_RATE * chunk_length_s
         total_samples = len(audio)
         transcription = []
         total_start_time = time.time()
@@ -85,10 +94,14 @@ class WhisperONNX:
             input_features = self.preprocess(audio_chunk)
             encoder_out = self.encode(input_features)
             tokens, first_token_time = self.decode(encoder_out)
-            transcription.append(self.tokenizer.decode(tokens, skip_special_tokens=True).strip())
+            transcription.append(
+                self.tokenizer.decode(tokens, skip_special_tokens=True).strip()
+            )
 
             print(f"\n🔹 Performance Metric (Chunk {start // chunk_size + 1}):")
-            print(f"   ⏱️ Time to First Token: {first_token_time - total_start_time:.2f} seconds")
+            print(
+                f"   ⏱️ Time to First Token: {first_token_time - total_start_time:.2f} seconds"
+            )
 
         total_end_time = time.time()
         input_audio_duration = total_samples / SAMPLE_RATE
@@ -109,7 +122,9 @@ def load_provider_options(config, model_name, device):
         raise ValueError(f"Model type '{model_key}' not found in config")
 
     if device not in config["whisper"][model_key]:
-        raise ValueError(f"Device '{device}' not found in config for model type '{model_key}'")
+        raise ValueError(
+            f"Device '{device}' not found in config for model type '{model_key}'"
+        )
 
     model_config = config["whisper"][model_key][device]
     encoder_opts = model_config["encoder"]
@@ -123,8 +138,8 @@ def load_provider_options(config, model_name, device):
                     {
                         "config_file": opts["config_file"],
                         "cache_dir": opts.get("cache_dir", ""),
-                        "cache_key": opts.get("cache_key", "")
-                    }
+                        "cache_key": opts.get("cache_key", ""),
+                    },
                 )
             ]
         else:
@@ -146,8 +161,13 @@ def mic_stream(model, duration=0):
         q_audio.put(indata.copy())
 
     def feeder():
-        with sd.InputStream(samplerate=SAMPLE_RATE, channels=1, dtype='float32',
-                            blocksize=CHUNK_SIZE, callback=audio_callback):
+        with sd.InputStream(
+            samplerate=SAMPLE_RATE,
+            channels=1,
+            dtype="float32",
+            blocksize=CHUNK_SIZE,
+            callback=audio_callback,
+        ):
             if duration > 0:
                 sd.sleep(int(duration * 1000))
                 stop_flag.set()
@@ -174,13 +194,30 @@ def mic_stream(model, duration=0):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True, help="WAV file path or 'mic'")
-    parser.add_argument("--encoder", required=True, help="Path to Whisper encoder ONNX model")
-    parser.add_argument("--decoder", required=True, help="Path to Whisper decoder ONNX model")
-    parser.add_argument("--hf_model", default="openai/whisper-base",
-                        help="Hugging Face model name (e.g., openai/whisper-small)")
-    parser.add_argument("--config-file", required=True, default="./config/model_config.json", help="Path to Model provider configs")
-    parser.add_argument("--device", choices=['cpu', 'npu'], default='cpu')
-    parser.add_argument("--duration", type=int, default=0, help="Mic duration in seconds (0 = unlimited)")
+    parser.add_argument(
+        "--encoder", required=True, help="Path to Whisper encoder ONNX model"
+    )
+    parser.add_argument(
+        "--decoder", required=True, help="Path to Whisper decoder ONNX model"
+    )
+    parser.add_argument(
+        "--hf_model",
+        default="openai/whisper-base",
+        help="Hugging Face model name (e.g., openai/whisper-small)",
+    )
+    parser.add_argument(
+        "--config-file",
+        required=True,
+        default="./config/model_config.json",
+        help="Path to Model provider configs",
+    )
+    parser.add_argument("--device", choices=["cpu", "npu"], default="cpu")
+    parser.add_argument(
+        "--duration",
+        type=int,
+        default=0,
+        help="Mic duration in seconds (0 = unlimited)",
+    )
     args = parser.parse_args()
 
     if Path(args.config_file).exists():
@@ -193,17 +230,22 @@ def main():
         model_config, args.hf_model, args.device
     )
 
-    model = WhisperONNX(args.encoder, args.decoder,
-                        hf_model=args.hf_model,
-                        encoder_providers=encoder_providers,
-                        decoder_providers=decoder_providers)
+    model = WhisperONNX(
+        args.encoder,
+        args.decoder,
+        hf_model=args.hf_model,
+        encoder_providers=encoder_providers,
+        decoder_providers=decoder_providers,
+    )
 
-    if args.input.lower() == 'mic':
+    if args.input.lower() == "mic":
         mic_stream(model, args.duration)
     else:
         waveform, sr = torchaudio.load(args.input)
         if sr != SAMPLE_RATE:
-            waveform = torchaudio.transforms.Resample(orig_freq=sr, new_freq=SAMPLE_RATE)(waveform)
+            waveform = torchaudio.transforms.Resample(
+                orig_freq=sr, new_freq=SAMPLE_RATE
+            )(waveform)
         audio = waveform.squeeze(0).numpy()
         text = model.transcribe(audio, chunk_length_s=30)
         print("\n🗣️ Transcription:", text)

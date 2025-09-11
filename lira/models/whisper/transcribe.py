@@ -10,24 +10,42 @@ import time
 
 SAMPLE_RATE = 16000
 
+
 class WhisperONNX:
-    def __init__(self, encoder_path, decoder_path, encoder_provider, decoder_provider, model_type="whisper-base"):
+    def __init__(
+        self,
+        encoder_path,
+        decoder_path,
+        encoder_provider,
+        decoder_provider,
+        model_type="whisper-base",
+    ):
         self.encoder = ort.InferenceSession(encoder_path, providers=encoder_provider)
         self.decoder = ort.InferenceSession(decoder_path, providers=decoder_provider)
 
         # Determine tokenizer directory
         tokenizer_dir = Path(encoder_path).parent
-        print(f"\nLoading tokenizer and feature extractor from: {Path(tokenizer_dir).resolve()}")
+        print(
+            f"\nLoading tokenizer and feature extractor from: {Path(tokenizer_dir).resolve()}"
+        )
 
-        self.feature_extractor = WhisperFeatureExtractor.from_pretrained(tokenizer_dir, local_files_only=True)
-        self.tokenizer = WhisperTokenizer.from_pretrained(tokenizer_dir, local_files_only=True)
+        self.feature_extractor = WhisperFeatureExtractor.from_pretrained(
+            tokenizer_dir, local_files_only=True
+        )
+        self.tokenizer = WhisperTokenizer.from_pretrained(
+            tokenizer_dir, local_files_only=True
+        )
 
         self.decoder_start_token = self.tokenizer.pad_token_id
         self.eos_token = self.tokenizer.eos_token_id
-        self.max_length = self.max_length = min(448, self.decoder.get_inputs()[0].shape[1])
+        self.max_length = self.max_length = min(
+            448, self.decoder.get_inputs()[0].shape[1]
+        )
 
     def preprocess(self, audio):
-        inputs = self.feature_extractor(audio, sampling_rate=SAMPLE_RATE, return_tensors="np")
+        inputs = self.feature_extractor(
+            audio, sampling_rate=SAMPLE_RATE, return_tensors="np"
+        )
         return inputs["input_features"]
 
     def encode(self, input_features):
@@ -36,14 +54,15 @@ class WhisperONNX:
     def decode(self, encoder_out):
         tokens = [self.decoder_start_token]
         for _ in range(self.max_length):
-            decoder_input = np.full((1, self.max_length), self.eos_token, dtype=np.int64)
-            decoder_input[0, :len(tokens)] = tokens
+            decoder_input = np.full(
+                (1, self.max_length), self.eos_token, dtype=np.int64
+            )
+            decoder_input[0, : len(tokens)] = tokens
 
-            logits = self.decoder.run(None, {
-                "input_ids": decoder_input,
-                "encoder_hidden_states": encoder_out
-            })[0]
-            next_token = int(np.argmax(logits[0, len(tokens)-1]))
+            logits = self.decoder.run(
+                None, {"input_ids": decoder_input, "encoder_hidden_states": encoder_out}
+            )[0]
+            next_token = int(np.argmax(logits[0, len(tokens) - 1]))
             if next_token == self.eos_token:
                 break
             tokens.append(next_token)
@@ -68,7 +87,9 @@ class WhisperONNX:
             input_features = self.preprocess(audio_chunk)
             encoder_out = self.encode(input_features)
             tokens = self.decode(encoder_out)
-            transcription.append(self.tokenizer.decode(tokens, skip_special_tokens=True).strip())
+            transcription.append(
+                self.tokenizer.decode(tokens, skip_special_tokens=True).strip()
+            )
             chunk_idx += 1
 
         total_end_time = time.time()
@@ -81,14 +102,38 @@ class WhisperONNX:
     @staticmethod
     def parse_cli(subparsers):
         whisper_parser = subparsers.add_parser("whisper", help="Run Whisper model")
-        whisper_parser.add_argument("-m", "--model", required=True, help="Model name or path")
+        whisper_parser.add_argument(
+            "-m", "--model", required=True, help="Model name or path"
+        )
         whisper_parser.add_argument("--audio", help="Path to audio file")
-        whisper_parser.add_argument("--model_type", default="whisper-base", help="Model type (default: whisper-base)")
-        whisper_parser.add_argument("--device", default="cpu", choices=["cpu", "npu", "igpu"], help="Device to run the model on (default: cpu)")
-        whisper_parser.add_argument("--eval_dir", help="Dataset directory with wavs/ and transcripts.txt")
-        whisper_parser.add_argument("--results_dir", default="results", help="Directory to store evaluation results")
-        whisper_parser.add_argument("--chunk_length", type=int, default=30, help="Chunk length in seconds for long-form transcription")
-        whisper_parser.add_argument("--debug", action="store_true", help="Enable debug mode")
+        whisper_parser.add_argument(
+            "--model_type",
+            default="whisper-base",
+            help="Model type (default: whisper-base)",
+        )
+        whisper_parser.add_argument(
+            "--device",
+            default="cpu",
+            choices=["cpu", "npu", "igpu"],
+            help="Device to run the model on (default: cpu)",
+        )
+        whisper_parser.add_argument(
+            "--eval_dir", help="Dataset directory with wavs/ and transcripts.txt"
+        )
+        whisper_parser.add_argument(
+            "--results_dir",
+            default="results",
+            help="Directory to store evaluation results",
+        )
+        whisper_parser.add_argument(
+            "--chunk_length",
+            type=int,
+            default=30,
+            help="Chunk length in seconds for long-form transcription",
+        )
+        whisper_parser.add_argument(
+            "--debug", action="store_true", help="Enable debug mode"
+        )
         whisper_parser.set_defaults(func=WhisperONNX.run)
 
     @staticmethod
@@ -120,9 +165,13 @@ class WhisperONNX:
         if args.audio:
             waveform, sr = torchaudio.load(args.audio)
             if sr != SAMPLE_RATE:
-                waveform = torchaudio.transforms.Resample(orig_freq=sr, new_freq=SAMPLE_RATE)(waveform)
+                waveform = torchaudio.transforms.Resample(
+                    orig_freq=sr, new_freq=SAMPLE_RATE
+                )(waveform)
             audio = waveform.squeeze(0).numpy()
-            transcription, rtf = whisper.transcribe(audio, chunk_length_s=args.chunk_length)
+            transcription, rtf = whisper.transcribe(
+                audio, chunk_length_s=args.chunk_length
+            )
             print("\nTranscription:", transcription)
             print(f"Real-Time Factor (RTF): {rtf:.2f}")
 
@@ -137,7 +186,10 @@ class WhisperONNX:
             return
 
         with open(transcript_file, "r", encoding="utf-8") as f:
-            references = {line.split()[0]: " ".join(line.strip().split()[1:]) for line in f.readlines()}
+            references = {
+                line.split()[0]: " ".join(line.strip().split()[1:])
+                for line in f.readlines()
+            }
 
         output_dir = Path(results_dir) / dataset_name
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -154,7 +206,9 @@ class WhisperONNX:
                 reference = references[key].lower()
                 waveform, sr = torchaudio.load(str(wav_path))
                 if sr != SAMPLE_RATE:
-                    waveform = torchaudio.transforms.Resample(orig_freq=sr, new_freq=SAMPLE_RATE)(waveform)
+                    waveform = torchaudio.transforms.Resample(
+                        orig_freq=sr, new_freq=SAMPLE_RATE
+                    )(waveform)
                 audio = waveform.squeeze(0).numpy()
                 predicted, rtf = model.transcribe(audio)
 
@@ -168,14 +222,20 @@ class WhisperONNX:
                 out_f.write(f"{key}\n")
                 out_f.write(f"Reference: {reference}\n")
                 out_f.write(f"Predicted: {predicted}\n")
-                out_f.write(f"WER: {sample_wer:.3f}, CER: {sample_cer:.3f}, RTF: {rtf:.3f}\n\n")
+                out_f.write(
+                    f"WER: {sample_wer:.3f}, CER: {sample_cer:.3f}, RTF: {rtf:.3f}\n\n"
+                )
 
             if count:
                 avg_wer = total_wer / count
                 avg_cer = total_cer / count
                 avg_rtf = total_rtf / count
                 print(f"Evaluation completed for {count} files.")
-                print(f"Average WER: {avg_wer:.3f}, Average CER: {avg_cer:.3f}, Average RTF: {avg_rtf:.3f}")
-                out_f.write(f"Summary:\nAverage WER: {avg_wer:.3f}\nAverage CER: {avg_cer:.3f}\nAverage RTF: {avg_rtf:.3f}\n")
+                print(
+                    f"Average WER: {avg_wer:.3f}, Average CER: {avg_cer:.3f}, Average RTF: {avg_rtf:.3f}"
+                )
+                out_f.write(
+                    f"Summary:\nAverage WER: {avg_wer:.3f}\nAverage CER: {avg_cer:.3f}\nAverage RTF: {avg_rtf:.3f}\n"
+                )
             else:
                 print("No valid audio-transcript pairs found.")

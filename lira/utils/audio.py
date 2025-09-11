@@ -11,6 +11,7 @@ BLANK_ID = 0
 CHUNK_LEN = 151
 SAMPLE_RATE = 16000
 
+
 def extract_fbank(audio):
     audio_tensor = torch.tensor(audio).unsqueeze(0)
     return torchaudio.compliance.kaldi.fbank(
@@ -21,8 +22,9 @@ def extract_fbank(audio):
         frame_length=25.0,
         frame_shift=10.0,
         snip_edges=True,
-        use_energy=False
+        use_energy=False,
     ).numpy()
+
 
 def get_providers(device, cache_key=None, cache_dir=None, config_file=None):
     """
@@ -39,18 +41,28 @@ def get_providers(device, cache_key=None, cache_dir=None, config_file=None):
     """
     if device == "npu":
         assert cache_key is not None, "cache_key must not be None when device is 'npu'"
-        assert cache_dir is not None , "cache_dir must be a valid path string when device is 'npu'"
-        assert config_file is not None, "config_file must be a valid path string when device is 'npu'"
+        assert (
+            cache_dir is not None
+        ), "cache_dir must be a valid path string when device is 'npu'"
+        assert (
+            config_file is not None
+        ), "config_file must be a valid path string when device is 'npu'"
         assert os.path.exists(cache_dir), f"cache_dir '{cache_dir}' does not exist"
-        assert os.path.exists(config_file), f"config_file '{config_file}' does not exist"
+        assert os.path.exists(
+            config_file
+        ), f"config_file '{config_file}' does not exist"
         return [
-            ("VitisAIExecutionProvider", {
-                "config_file": config_file,
-                "cache_dir": cache_dir,
-                "cache_key": cache_key
-            })
+            (
+                "VitisAIExecutionProvider",
+                {
+                    "config_file": config_file,
+                    "cache_dir": cache_dir,
+                    "cache_key": cache_key,
+                },
+            )
         ]
     return ["CPUExecutionProvider"]
+
 
 def get_model_providers(model_type, device, config_path="model_config.json"):
     """
@@ -67,7 +79,7 @@ def get_model_providers(model_type, device, config_path="model_config.json"):
     with open(config_path, "r") as f:
         config = json.load(f)
 
-    model_type_parts = model_type.split('-')
+    model_type_parts = model_type.split("-")
     base_model_type = model_type_parts[0]
     sub_model_type = model_type_parts[1] if len(model_type_parts) > 1 else None
 
@@ -76,24 +88,31 @@ def get_model_providers(model_type, device, config_path="model_config.json"):
 
     if sub_model_type:
         if sub_model_type not in config[base_model_type]:
-            raise ValueError(f"Configuration for sub-model '{sub_model_type}' under '{base_model_type}' not found.")
+            raise ValueError(
+                f"Configuration for sub-model '{sub_model_type}' under '{base_model_type}' not found."
+            )
         device_config = config[base_model_type][sub_model_type].get(device, {})
     else:
         device_config = config[base_model_type].get(device, {})
 
     providers = {}
     for component, settings in device_config.items():
-        if settings.get("cache_key") and settings.get("cache_dir") and settings.get("config_file"):
+        if (
+            settings.get("cache_key")
+            and settings.get("cache_dir")
+            and settings.get("config_file")
+        ):
             providers[component] = get_providers(
                 "npu",
                 cache_key=settings["cache_key"],
                 cache_dir=settings["cache_dir"],
-                config_file=settings["config_file"]
+                config_file=settings["config_file"],
             )
         else:
             providers[component] = get_providers("cpu")
 
     return providers
+
 
 def greedy_search(encoder, decoder, joiner, features, tokens, state):
     context_size = 2
@@ -104,16 +123,18 @@ def greedy_search(encoder, decoder, joiner, features, tokens, state):
 
     chunk_len = CHUNK_LEN if encoder.streaming else features.shape[0]
     for start in range(0, features.shape[0], chunk_len):
-        chunk = features[start:start + chunk_len]
+        chunk = features[start : start + chunk_len]
         if chunk.shape[0] < chunk_len:
-            chunk = np.pad(chunk, ((0, chunk_len - chunk.shape[0]), (0, 0)), mode='constant')
+            chunk = np.pad(
+                chunk, ((0, chunk_len - chunk.shape[0]), (0, 0)), mode="constant"
+            )
         chunk = chunk[np.newaxis, :, :]
         encoder_out = encoder.run(chunk)
 
         for t in range(encoder_out.shape[1]):
             step = 0
             while True:
-                logits = joiner.run(encoder_out[:, t:t + 1, :], decoder_out)
+                logits = joiner.run(encoder_out[:, t : t + 1, :], decoder_out)
                 y = int(np.argmax(logits, axis=-1)[0])
                 if y == BLANK_ID or step > 5:
                     break
@@ -127,8 +148,13 @@ def greedy_search(encoder, decoder, joiner, features, tokens, state):
             break
 
     state["hyp"] = hyp
-    state["text"] = ''.join([tokens[i] for i in hyp[1:] if i < len(tokens)]).replace('▁', ' ').strip()
+    state["text"] = (
+        "".join([tokens[i] for i in hyp[1:] if i < len(tokens)])
+        .replace("▁", " ")
+        .strip()
+    )
     return state["text"]
+
 
 def mic_stream(transcribe_fn, duration=0):
     q_audio = queue.Queue()
@@ -140,8 +166,13 @@ def mic_stream(transcribe_fn, duration=0):
         q_audio.put(indata.copy())
 
     def feeder():
-        with sd.InputStream(samplerate=SAMPLE_RATE, channels=1, dtype='float32',
-                            blocksize=CHUNK_LEN, callback=audio_callback):
+        with sd.InputStream(
+            samplerate=SAMPLE_RATE,
+            channels=1,
+            dtype="float32",
+            blocksize=CHUNK_LEN,
+            callback=audio_callback,
+        ):
             if duration > 0:
                 sd.sleep(int(duration * 1000))
                 stop_flag.set()
@@ -161,8 +192,8 @@ def mic_stream(transcribe_fn, duration=0):
             buffer = np.concatenate((buffer, chunk))
             if len(buffer) >= SAMPLE_RATE * 5:
                 text = transcribe_fn(buffer, state)
-                new_text = text[len(prev_text):]
-                print(new_text, end='', flush=True)
+                new_text = text[len(prev_text) :]
+                print(new_text, end="", flush=True)
                 prev_text = text
                 buffer = np.zeros((0,), dtype=np.float32)
         except queue.Empty:
