@@ -18,7 +18,7 @@ setup(
         "jiwer",
         #dev tools
         "onnx",
-        "optimum-cli"
+        "optimum"
     ],
     python_requires=">=3.7",
     entry_points={
