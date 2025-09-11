@@ -14,12 +14,17 @@ setup(
         "sounddevice",
         "transformers",
         "soundfile",
-        "gradio"
+        "gradio",
+        "jiwer",
+        #dev tools
+        "onnx",
+        "optimum"
     ],
     python_requires=">=3.7",
     entry_points={
         "console_scripts": [
-            "run_asr=lira.cli.run_asr:main",
+            "run_asr=lira.scripts.run_asr:main",
+            "lira=lira.cli:main", 
         ],
     },
 )

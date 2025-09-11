@@ -1,0 +1,58 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+
+name: Lint and Test LIRA
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  merge_group:
+
+permissions:
+  contents: read
+
+jobs:
+  test-lira:
+    env:
+        LIRA_CI_MODE: "True"
+    strategy:
+      matrix:
+        os: [windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Miniconda with 64-bit Python
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniconda-version: "latest"
+          activate-environment: lira
+          python-version: "3.10"
+          run-post: "false"
+      # - name: Download and Install Ryzen AI Environment
+      #   shell: powershell
+      #   run: |
+      #     Invoke-WebRequest -Uri "https://account.amd.com/en/forms/downloads/ryzen-ai-software-platform-xef.html?filename=ryzen-ai-1.5.0.msi" -OutFile "ryzen-ai-1.5.0.msi"
+      #     Start-Process msiexec.exe -ArgumentList "/i ryzen-ai-1.5.0.msi /quiet /norestart" -Wait
+      # - name: Activate Ryzen AI Conda Environment
+      #   shell: bash -el {0}
+      #   run: |
+      #     source ~/miniconda3/etc/profile.d/conda.sh
+      #     conda activate ryzen-ai-1.5.0
+      - name: Install dependencies
+        shell: bash -el {0}
+        run: |
+          python -m pip install --upgrade pip
+          pip install pylint
+          pip install onnxruntime
+          python -m pip check
+          pip install -e .
+      - name: Lint with Black
+        uses: psf/black@stable
+        with:
+          options: "--check --verbose"
+          src: "lira/models"
+      - name: Run LIRA tests
+        shell: bash -el {0}
+        run: |
+          python -m unittest discover tests
