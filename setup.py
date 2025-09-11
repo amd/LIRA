@@ -15,7 +15,8 @@ setup(
         "transformers",
         "soundfile",
         "gradio",
-        "jiwer"
+        "jiwer",
+        "onnx"
     ],
     python_requires=">=3.7",
     entry_points={
