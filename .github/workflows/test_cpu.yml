@@ -18,7 +18,7 @@ jobs:
         LIRA_CI_MODE: "True"
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
@@ -29,16 +29,16 @@ jobs:
           activate-environment: lira
           python-version: "3.10"
           run-post: "false"
-      # - name: Download and Install Ryzen AI Environment
-      #   shell: powershell
-      #   run: |
-      #     Invoke-WebRequest -Uri "https://account.amd.com/en/forms/downloads/ryzen-ai-software-platform-xef.html?filename=ryzen-ai-1.5.0.msi" -OutFile "ryzen-ai-1.5.0.msi"
-      #     Start-Process msiexec.exe -ArgumentList "/i ryzen-ai-1.5.0.msi /quiet /norestart" -Wait
-      # - name: Activate Ryzen AI Conda Environment
-      #   shell: bash -el {0}
-      #   run: |
-      #     source ~/miniconda3/etc/profile.d/conda.sh
-      #     conda activate ryzen-ai-1.5.0
+      - name: Download and Install Ryzen AI Environment
+        shell: powershell
+        run: |
+          Invoke-WebRequest -Uri "https://account.amd.com/en/forms/downloads/ryzen-ai-software-platform-xef.html?filename=ryzen-ai-1.5.0.msi" -OutFile "ryzen-ai-1.5.0.msi"
+          Start-Process msiexec.exe -ArgumentList "/i ryzen-ai-1.5.0.msi /quiet /norestart" -Wait
+      - name: Activate Ryzen AI Conda Environment
+        shell: bash -el {0}
+        run: |
+          source ~/miniconda3/etc/profile.d/conda.sh
+          conda activate ryzen-ai-1.5.0
       - name: Install dependencies
         shell: bash -el {0}
         run: |
