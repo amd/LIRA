@@ -16,7 +16,9 @@ setup(
         "soundfile",
         "gradio",
         "jiwer",
-        "onnx"
+        #dev tools
+        "onnx",
+        "optimum-cli"
     ],
     python_requires=">=3.7",
     entry_points={
