@@ -14,7 +14,8 @@ setup(
         "sounddevice",
         "transformers",
         "soundfile",
-        "gradio"
+        "gradio",
+        "jiwer"
     ],
     python_requires=">=3.7",
     entry_points={

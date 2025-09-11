@@ -111,7 +111,7 @@ class ZipformerONNX:
             self.encoder, self.decoder, self.joiner, features, tokens, state
         )
         print("Transcription completed.")
-        print("🗣️ Transcription:", transcription)
+        print("Transcription:", transcription)
         return transcription
 
     @staticmethod
