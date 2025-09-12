@@ -9,6 +9,7 @@ from jiwer import wer, cer
 import time
 
 SAMPLE_RATE = 16000
+MAX_DECODE_STEPS = 100
 
 
 class WhisperONNX:
@@ -16,13 +17,17 @@ class WhisperONNX:
         self,
         encoder_path,
         decoder_path,
+        decoder_init_path,
+        decoder_past_path,
         encoder_provider,
         decoder_provider,
         model_type="whisper-base",
+        use_kv_cache=False
     ):
         self.encoder = ort.InferenceSession(encoder_path, providers=encoder_provider)
         self.decoder = ort.InferenceSession(decoder_path, providers=decoder_provider)
-
+        self.decoder_init = ort.InferenceSession(decoder_init_path, providers=decoder_provider)
+        self.decoder_past = ort.InferenceSession(decoder_past_path, providers=decoder_provider)
         # Determine tokenizer directory
         tokenizer_dir = Path(encoder_path).parent
         print(
@@ -36,12 +41,12 @@ class WhisperONNX:
             tokenizer_dir, local_files_only=True
         )
 
-        self.decoder_start_token = self.tokenizer.pad_token_id
+        self.decoder_start_token =  self.sot_token = self.tokenizer.convert_tokens_to_ids("<|startoftranscript|>")
         self.eos_token = self.tokenizer.eos_token_id
-        self.max_length = self.max_length = min(
-            448, self.decoder.get_inputs()[0].shape[1]
-        )
-
+        self.max_length = self.max_length = min( 448, self.decoder.get_inputs()[0].shape[1])
+        self.use_kv_cache = use_kv_cache
+        self.num_layers = 6
+        self.debug = True
     def preprocess(self, audio):
         inputs = self.feature_extractor(
             audio, sampling_rate=SAMPLE_RATE, return_tensors="np"
@@ -50,23 +55,99 @@ class WhisperONNX:
 
     def encode(self, input_features):
         return self.encoder.run(None, {"input_features": input_features})[0]
+    def _extract_past(self, past_outputs):
+        pkv = {}
+        num_tensors = len(past_outputs)
 
+        if num_tensors == 4 * self.num_layers:
+            # Full encoder + decoder KV, remove this later TODO IA
+            idx = 0
+            for i in range(self.num_layers):
+                pkv[f"past_key_values.{i}.decoder.key"] = past_outputs[idx]; idx += 1
+                pkv[f"past_key_values.{i}.decoder.value"] = past_outputs[idx]; idx += 1
+                pkv[f"past_key_values.{i}.encoder.key"] = past_outputs[idx]; idx += 1
+                pkv[f"past_key_values.{i}.encoder.value"] = past_outputs[idx]; idx += 1
+
+        elif num_tensors == 2 * self.num_layers:
+            # Only decoder KV (common for decoder_with_past)
+            idx = 0
+            for i in range(self.num_layers):
+                pkv[f"past_key_values.{i}.decoder.key"] = past_outputs[idx]; idx += 1
+                pkv[f"past_key_values.{i}.decoder.value"] = past_outputs[idx]; idx += 1
+
+        else:
+            raise RuntimeError(f"Unexpected number of past tensors: {num_tensors}")
+
+        return pkv
+    
     def decode(self, encoder_out):
-        tokens = [self.decoder_start_token]
-        for _ in range(self.max_length):
-            decoder_input = np.full(
-                (1, self.max_length), self.eos_token, dtype=np.int64
-            )
-            decoder_input[0, : len(tokens)] = tokens
+        tokens = [self.sot_token]
+        token_id = self.sot_token
+        past_kv = None
+        encoder_kv = {}
 
-            logits = self.decoder.run(
-                None, {"input_ids": decoder_input, "encoder_hidden_states": encoder_out}
-            )[0]
-            next_token = int(np.argmax(logits[0, len(tokens) - 1]))
-            if next_token == self.eos_token:
-                break
-            tokens.append(next_token)
+        if self.use_kv_cache:
+            print("Using KV Cache supported models")
+            for step in range(MAX_DECODE_STEPS):
+                if step == 0:
+                    ort_inputs = {
+                        "input_ids": np.array([[token_id]], dtype=np.int64),
+                        "encoder_hidden_states": encoder_out
+                    }
+                    outputs = self.decoder_init.run(None, ort_inputs)
+                else:
+                    ort_inputs = {
+                        "input_ids": np.array([[token_id]], dtype=np.int64)
+                    }
+                    ort_inputs.update(past_kv)
+                    ort_inputs.update(encoder_kv)
+                    outputs = self.decoder_past.run(None, ort_inputs)
+
+                logits = outputs[0]
+                pkv = self._extract_past(outputs[1:])
+
+                decoder_only = {}
+                for k, v in pkv.items():
+                    if ".encoder." in k:
+                        if step == 0:
+                            encoder_kv[k] = v  # IA store once
+                    else:
+                        decoder_only[k] = v
+
+                past_kv = decoder_only
+
+                next_token = int(np.argmax(logits[0, -1]))
+                if self.debug:
+                    print(f"Step {step} → {next_token} ({self.tokenizer.decode([next_token])})")
+
+                if next_token == self.eos_token:
+                    print("EOS reached, stopping.")
+                    break
+
+                tokens.append(next_token)
+                token_id = next_token
+        else:
+            print("Using non-KV Cache logic")
+            for _ in range(self.max_length):
+                decoder_input = np.full(
+                    (1, self.max_length), self.eos_token, dtype=np.int64
+                )
+                decoder_input[0, : len(tokens)] = tokens
+
+                logits = self.decoder.run(
+                    None, {"input_ids": decoder_input, "encoder_hidden_states": encoder_out}
+                )[0]
+                next_token = int(np.argmax(logits[0, len(tokens) - 1]))
+                if next_token == self.eos_token:
+                    break
+                tokens.append(next_token)
+
+        transcription = self.tokenizer.decode(tokens, skip_special_tokens=True).strip()
+        if self.debug:
+            print("\n🗣️ Tokens:", tokens)
+            print("📝 Transcription:", transcription)
         return tokens
+
 
     def transcribe(self, audio, chunk_length_s=30, is_mic=False):
         """
@@ -107,7 +188,7 @@ class WhisperONNX:
         )
         whisper_parser.add_argument("--audio", help="Path to audio file")
         whisper_parser.add_argument(
-            "--model_type",
+            "--model-type",
             default="whisper-base",
             help="Model type (default: whisper-base)",
         )
@@ -118,21 +199,21 @@ class WhisperONNX:
             help="Device to run the model on (default: cpu)",
         )
         whisper_parser.add_argument(
-            "--eval_dir", help="Dataset directory with wavs/ and transcripts.txt"
+            "--eval-dir", help="Dataset directory with wavs/ and transcripts.txt"
         )
         whisper_parser.add_argument(
-            "--results_dir",
+            "--results-dir",
             default="results",
             help="Directory to store evaluation results",
         )
         whisper_parser.add_argument(
-            "--chunk_length",
+            "--chunk-length",
             type=int,
             default=30,
             help="Chunk length in seconds for long-form transcription",
         )
         whisper_parser.add_argument(
-            "--debug", action="store_true", help="Enable debug mode"
+            "--use-kv-cache", action="store_true", help="Enable KV cache"
         )
         whisper_parser.set_defaults(func=WhisperONNX.run)
 
@@ -148,9 +229,12 @@ class WhisperONNX:
         whisper = WhisperONNX(
             encoder_path=f"{args.model}/encoder_model.onnx",
             decoder_path=f"{args.model}/decoder_model.onnx",
+            decoder_init_path=f"{args.model}/decoder_init_model.onnx",
+            decoder_past_path=f"{args.model}/decoder_with_past_model.onnx",
             encoder_provider=providers,
             decoder_provider=providers,
             model_type=args.model_type,
+            use_kv_cache=args.use_kv_cache
         )
 
         # Ensure at least one input is provided
