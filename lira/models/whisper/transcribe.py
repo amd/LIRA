@@ -22,7 +22,8 @@ class WhisperONNX:
         encoder_provider,
         decoder_provider,
         model_type="whisper-base",
-        use_kv_cache=False
+        use_kv_cache=False,
+        debug=False
     ):
         self.encoder = ort.InferenceSession(encoder_path, providers=encoder_provider)
         self.decoder = ort.InferenceSession(decoder_path, providers=decoder_provider)
@@ -40,13 +41,16 @@ class WhisperONNX:
         self.tokenizer = WhisperTokenizer.from_pretrained(
             tokenizer_dir, local_files_only=True
         )
-
+        self.debug = debug
         self.decoder_start_token =  self.sot_token = self.tokenizer.convert_tokens_to_ids("<|startoftranscript|>")
         self.eos_token = self.tokenizer.eos_token_id
         self.max_length = self.max_length = min( 448, self.decoder.get_inputs()[0].shape[1])
         self.use_kv_cache = use_kv_cache
-        self.num_layers = 6
-        self.debug = True
+        # Dynamically determine the number of layers from the decoder model
+        self.num_layers = len([inp for inp in self.decoder_past.get_inputs() if "key" in inp.name]) // 4
+        if self.debug:
+            print(f"Detected number of layers: {self.num_layers}")
+
     def preprocess(self, audio):
         inputs = self.feature_extractor(
             audio, sampling_rate=SAMPLE_RATE, return_tensors="np"
@@ -60,7 +64,7 @@ class WhisperONNX:
         num_tensors = len(past_outputs)
 
         if num_tensors == 4 * self.num_layers:
-            # Full encoder + decoder KV, remove this later TODO IA
+            # Full encoder + decoder KV
             idx = 0
             for i in range(self.num_layers):
                 pkv[f"past_key_values.{i}.decoder.key"] = past_outputs[idx]; idx += 1
@@ -69,14 +73,14 @@ class WhisperONNX:
                 pkv[f"past_key_values.{i}.encoder.value"] = past_outputs[idx]; idx += 1
 
         elif num_tensors == 2 * self.num_layers:
-            # Only decoder KV (common for decoder_with_past)
+            # Only decoder KV
             idx = 0
             for i in range(self.num_layers):
                 pkv[f"past_key_values.{i}.decoder.key"] = past_outputs[idx]; idx += 1
                 pkv[f"past_key_values.{i}.decoder.value"] = past_outputs[idx]; idx += 1
 
         else:
-            raise RuntimeError(f"Unexpected number of past tensors: {num_tensors}")
+            raise RuntimeError(f"Unexpected number of past tensors: {num_tensors}. Expected {4 * self.num_layers} or {2 * self.num_layers}.")
 
         return pkv
     
@@ -234,7 +238,8 @@ class WhisperONNX:
             encoder_provider=providers,
             decoder_provider=providers,
             model_type=args.model_type,
-            use_kv_cache=args.use_kv_cache
+            use_kv_cache=args.use_kv_cache,
+            debug=args.debug
         )
 
         # Ensure at least one input is provided
