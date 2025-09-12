@@ -1,12 +1,14 @@
 import numpy as np
 import onnxruntime as ort
 from transformers import WhisperFeatureExtractor, WhisperTokenizer
-from lira.utils.audio import get_providers
+import time
 import json
 import torchaudio
 from pathlib import Path
 from jiwer import wer, cer
-import time
+
+from lira.utils.audio import get_model_providers
+from lira.models.whisper.export import export_whisper_model
 
 SAMPLE_RATE = 16000
 MAX_DECODE_STEPS = 100
@@ -23,7 +25,7 @@ class WhisperONNX:
         decoder_past_path=None,
         model_type="whisper-base",
         use_kv_cache=False,
-        debug=False,
+        profile=False,
     ):
         self.encoder = ort.InferenceSession(encoder_path, providers=encoder_provider)
         self.decoder = ort.InferenceSession(decoder_path, providers=decoder_provider)
@@ -54,7 +56,7 @@ class WhisperONNX:
         self.tokenizer = WhisperTokenizer.from_pretrained(
             tokenizer_dir, local_files_only=True
         )
-        self.debug = debug
+        self.profile = profile
         self.decoder_start_token = self.sot_token = (
             self.tokenizer.convert_tokens_to_ids("<|startoftranscript|>")
         )
@@ -140,11 +142,6 @@ class WhisperONNX:
                 past_kv = decoder_only
 
                 next_token = int(np.argmax(logits[0, -1]))
-                if self.debug:
-                    print(
-                        f"Step {step} → {next_token} ({self.tokenizer.decode([next_token])})"
-                    )
-
                 if next_token == self.eos_token:
                     print("EOS reached, stopping.")
                     break
@@ -168,42 +165,51 @@ class WhisperONNX:
                     break
                 tokens.append(next_token)
 
-        transcription = self.tokenizer.decode(tokens, skip_special_tokens=True).strip()
-        if self.debug:
-            print("\n🗣️ Tokens:", tokens)
-            print("📝 Transcription:", transcription)
         return tokens
 
-    def transcribe(self, audio, chunk_length_s=30, is_mic=False):
+    def transcribe(self, audio_path):
         """
-        Full encode-decode pipeline with support for long-form transcription using chunking.
+        Transcribe the given audio file.
         """
-        chunk_size = SAMPLE_RATE * chunk_length_s
-        total_samples = len(audio)
-        transcription = []
-        chunk_idx = 0
-        total_start_time = time.time()
+        input_features, audio_duration = self.preprocess_audio(audio_path)
 
-        overlap = SAMPLE_RATE * 1  # Tune this
-        for start in range(0, total_samples, chunk_size - overlap):
-            end = min(start + chunk_size, total_samples)
-            audio_chunk = audio[start:end]
+        # Time only the decoding step if profiling is enabled
+        start_time = time.time() if self.profile else None
+        encoder_out = self.encode(input_features)
+        tokens = self.decode(encoder_out)
+        end_time = time.time() if self.profile else None
 
-            # Process the chunk
-            input_features = self.preprocess(audio_chunk)
-            encoder_out = self.encode(input_features)
-            tokens = self.decode(encoder_out)
-            transcription.append(
-                self.tokenizer.decode(tokens, skip_special_tokens=True).strip()
+        transcription = self.tokenizer.decode(tokens, skip_special_tokens=True).strip()
+
+        rtf = (end_time - start_time) / audio_duration if self.profile else None
+
+        return transcription, rtf
+
+    def preprocess_audio(self, audio_path):
+        """
+        Preprocess the audio file by loading, resampling, and extracting features.
+        Returns input features and audio duration.
+        """
+        print(f"Loading audio from {audio_path}")
+        audio, sr = torchaudio.load(audio_path)
+        audio_duration = audio.shape[1] / sr  # Calculate duration in seconds
+
+        # Resample if not 16k
+        if sr != SAMPLE_RATE:
+            print(f"Resampling from {sr}Hz to {SAMPLE_RATE}Hz")
+            audio = torchaudio.transforms.Resample(orig_freq=sr, new_freq=SAMPLE_RATE)(
+                audio
             )
-            chunk_idx += 1
+            sr = SAMPLE_RATE
+        if sr != SAMPLE_RATE:
+            raise RuntimeError(f"Expected {SAMPLE_RATE}Hz audio but got {sr}Hz")
 
-        total_end_time = time.time()
-        input_audio_duration = total_samples / SAMPLE_RATE
-        rtf = (total_end_time - total_start_time) / input_audio_duration
+        features = self.feature_extractor(
+            audio.squeeze(0).numpy(), sampling_rate=SAMPLE_RATE, return_tensors="np"
+        )
+        print(f"Extracted features shape: {features['input_features'].shape}")
 
-        # Combine all transcriptions
-        return " ".join(transcription), rtf
+        return features["input_features"], audio_duration
 
     @staticmethod
     def parse_cli(subparsers):
@@ -232,13 +238,28 @@ class WhisperONNX:
             help="Directory to store evaluation results",
         )
         whisper_parser.add_argument(
-            "--chunk-length",
-            type=int,
-            default=30,
-            help="Chunk length in seconds for long-form transcription",
+            "--use-kv-cache", action="store_true", help="Enable KV cache"
         )
         whisper_parser.add_argument(
-            "--use-kv-cache", action="store_true", help="Enable KV cache"
+            "--profile", action="store_true", help="Enable profiling mode"
+        )
+        whisper_parser.add_argument(
+            "--export",
+            action="store_true",
+            help="Export the model instead of running it",
+        )
+        whisper_parser.add_argument(
+            "--export-dir",
+            default="exported_models",
+            help="Directory to export the model",
+        )
+        whisper_parser.add_argument(
+            "--opset", type=int, default=17, help="ONNX opset version (default: 17)"
+        )
+        whisper_parser.add_argument(
+            "--static",
+            action="store_true",
+            help="Use static shape parameters for export",
         )
         whisper_parser.set_defaults(func=WhisperONNX.run)
 
@@ -246,10 +267,19 @@ class WhisperONNX:
     def run(args):
         print(f"Running Whisper model: {args.model}")
 
+        if args.export:
+            print("Exporting model...")
+            export_whisper_model(
+                model_name=f"openai/{args.model_type}",
+                output_dir=args.export_dir,
+                opset=args.opset,
+                static=args.static,
+            )
+            print("Model export completed.")
+            args.model = args.export_dir
+
         # Load providers based on device
-        with open("config/model_config.json", "r") as f:
-            model_config = json.load(f)
-        providers = get_providers(args.device, model_config)
+        providers = get_model_providers(args.model_type, args.device)
 
         whisper = WhisperONNX(
             encoder_path=f"{args.model}/encoder_model.onnx",
@@ -260,7 +290,7 @@ class WhisperONNX:
             decoder_provider=providers,
             model_type=args.model_type,
             use_kv_cache=args.use_kv_cache,
-            debug=args.debug,
+            profile=args.profile,
         )
 
         # Ensure at least one input is provided
@@ -273,14 +303,8 @@ class WhisperONNX:
             return
 
         if args.audio:
-            waveform, sr = torchaudio.load(args.audio)
-            if sr != SAMPLE_RATE:
-                waveform = torchaudio.transforms.Resample(
-                    orig_freq=sr, new_freq=SAMPLE_RATE
-                )(waveform)
-            audio = waveform.squeeze(0).numpy()
             transcription, rtf = whisper.transcribe(
-                audio, chunk_length_s=args.chunk_length
+                args.audio,
             )
             print("\nTranscription:", transcription)
             print(f"Real-Time Factor (RTF): {rtf:.2f}")

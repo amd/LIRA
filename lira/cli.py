@@ -1,6 +1,7 @@
 import argparse
 from lira.models.whisper.transcribe import WhisperONNX
 from lira.models.zipformer.transcribe import ZipformerONNX
+from lira.server.server import serve
 
 
 def main():
@@ -14,7 +15,6 @@ def main():
     ZipformerONNX.parse_cli(run_subparsers)
 
     # 'compare' command
-    # Not Implemented
     compare_parser = subparsers.add_parser(
         "compare", help="Run multiple models simultaneously + chain tools"
     )
@@ -34,6 +34,24 @@ def main():
         "--args", nargs=argparse.REMAINDER, help="Arguments for the tool"
     )
 
+    # 'serve' command
+    serve_parser = subparsers.add_parser("serve", help="Run the LIRA server")
+    serve_parser.add_argument(
+        "--backend", required=True, help="Backend to use (e.g., openai)"
+    )
+    serve_parser.add_argument(
+        "--model", required=True, help="Model type (e.g., whisper-base)"
+    )
+    serve_parser.add_argument(
+        "--device", default="cpu", help="Device to run the server on"
+    )
+    serve_parser.add_argument(
+        "--host", default="0.0.0.0", help="Host to bind the server to"
+    )
+    serve_parser.add_argument(
+        "--port", type=int, default=5000, help="Port to run the server on"
+    )
+
     args = parser.parse_args()
 
     if args.command == "run":
@@ -43,6 +61,8 @@ def main():
         compare_models(args)
     elif args.command == "tool":
         run_tool(args)
+    elif args.command == "serve":
+        serve()
     else:
         parser.print_help()
 

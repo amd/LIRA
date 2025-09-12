@@ -5,6 +5,7 @@ from lira.utils.audio import get_model_providers, get_providers
 from lira.utils.audio import extract_fbank
 from lira.utils.tokens import load_tokens
 from lira.utils.audio import greedy_search
+from lira.utils.cache import get_cache_dir
 
 CHUNK_LEN = 151
 BLANK_ID = 0
@@ -165,7 +166,10 @@ class ZipformerONNX:
                 print("Using local model directory.")
             else:
                 print("Downloading model from Hugging Face repository...")
-                model_dir = snapshot_download(repo_id=model_dir)
+                cache_dir = get_cache_dir() / "hf"
+                model_dir = snapshot_download(
+                    repo_id=model_dir, cache_dir=str(cache_dir)
+                )
 
             for file in required_files:
                 file_path = os.path.join(model_dir, file)

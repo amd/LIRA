@@ -6,6 +6,7 @@ import threading
 import numpy as np
 import json
 import sounddevice as sd
+from lira.utils.config import MODEL_CONFIG_PATH
 
 BLANK_ID = 0
 CHUNK_LEN = 151
@@ -64,7 +65,7 @@ def get_providers(device, cache_key=None, cache_dir=None, config_file=None):
     return ["CPUExecutionProvider"]
 
 
-def get_model_providers(model_type, device, config_path="model_config.json"):
+def get_model_providers(model_type, device, config_path=MODEL_CONFIG_PATH):
     """
     Determines the appropriate providers for the given model type and device using a JSON configuration.
 

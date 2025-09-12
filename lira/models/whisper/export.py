@@ -123,33 +123,45 @@ def fix_static_shapes(input_model_path, output_model_path, params_to_fix):
     print(f"Static shapes fixed and saved to: {output_model_path}")
 
 
-if __name__ == "__main__":
-    args = parse_args()
+def export_whisper_model(model_name, output_dir, opset=17, static=False):
+    """Exports the Whisper model and fixes static shapes if required."""
+    # Determine parameters to fix
+    if not static:
+        with open("config/params.json", "r") as f:
+            params_to_fix = json.load(f)
+    else:
+        params_to_fix = STATIC_PARAMS
 
     # Step 1: Export ONNX model using optimum-cli
-    export_with_optimum_cli(args.model_name, args.output_dir, args.opset)
+    export_with_optimum_cli(model_name, output_dir, opset)
 
     # Step 2: Fix static shapes for encoder and decoder models
-    encoder_model_path = os.path.join(args.output_dir, "encoder_model.onnx")
-    decoder_model_path = os.path.join(args.output_dir, "decoder_model.onnx")
+    encoder_model_path = os.path.join(output_dir, "encoder_model.onnx")
+    decoder_model_path = os.path.join(output_dir, "decoder_model.onnx")
 
     if os.path.exists(encoder_model_path):
-        fix_static_shapes(encoder_model_path, encoder_model_path, args.params_to_fix)
+        fix_static_shapes(encoder_model_path, encoder_model_path, params_to_fix)
 
     if os.path.exists(decoder_model_path):
         # Create static version of decoder_init_model.onnx
-        decoder_init_model_path = os.path.join(
-            args.output_dir, "decoder_init_model.onnx"
-        )
-        kv_params_to_fix = args.params_to_fix.copy()
+        decoder_init_model_path = os.path.join(output_dir, "decoder_init_model.onnx")
+        kv_params_to_fix = params_to_fix.copy()
         kv_params_to_fix["decoder_sequence_length"] = kv_params_to_fix[
             "decoder_kv_sequence_length"
         ]
         fix_static_shapes(decoder_model_path, decoder_init_model_path, kv_params_to_fix)
 
-        static_decoder_model_path = os.path.join(args.output_dir, "decoder_model.onnx")
-        fix_static_shapes(
-            decoder_model_path, static_decoder_model_path, args.params_to_fix
-        )
+        static_decoder_model_path = os.path.join(output_dir, "decoder_model.onnx")
+        fix_static_shapes(decoder_model_path, static_decoder_model_path, params_to_fix)
 
     print("Model export and static shape conversion completed successfully.")
+
+
+if __name__ == "__main__":
+    args = parse_args()
+    export_whisper_model(
+        model_name=args.model_name,
+        output_dir=args.output_dir,
+        opset=args.opset,
+        static=args.static,
+    )
