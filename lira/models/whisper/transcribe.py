@@ -17,24 +17,37 @@ class WhisperONNX:
         self,
         encoder_path,
         decoder_path,
-        decoder_init_path,
-        decoder_past_path,
         encoder_provider,
         decoder_provider,
+        decoder_init_path=None,
+        decoder_past_path=None,
         model_type="whisper-base",
         use_kv_cache=False,
-        debug=False
+        debug=False,
     ):
         self.encoder = ort.InferenceSession(encoder_path, providers=encoder_provider)
         self.decoder = ort.InferenceSession(decoder_path, providers=decoder_provider)
-        self.decoder_init = ort.InferenceSession(decoder_init_path, providers=decoder_provider)
-        self.decoder_past = ort.InferenceSession(decoder_past_path, providers=decoder_provider)
+
+        self.use_kv_cache = use_kv_cache
+        if self.use_kv_cache:
+            self.decoder_init = ort.InferenceSession(
+                decoder_init_path, providers=decoder_provider
+            )
+            self.decoder_past = ort.InferenceSession(
+                decoder_past_path, providers=decoder_provider
+            )
+            self.num_layers = (
+                len(
+                    [inp for inp in self.decoder_past.get_inputs() if "key" in inp.name]
+                )
+                // 4
+            )
+
         # Determine tokenizer directory
         tokenizer_dir = Path(encoder_path).parent
         print(
             f"\nLoading tokenizer and feature extractor from: {Path(tokenizer_dir).resolve()}"
         )
-
         self.feature_extractor = WhisperFeatureExtractor.from_pretrained(
             tokenizer_dir, local_files_only=True
         )
@@ -42,14 +55,13 @@ class WhisperONNX:
             tokenizer_dir, local_files_only=True
         )
         self.debug = debug
-        self.decoder_start_token =  self.sot_token = self.tokenizer.convert_tokens_to_ids("<|startoftranscript|>")
+        self.decoder_start_token = self.sot_token = (
+            self.tokenizer.convert_tokens_to_ids("<|startoftranscript|>")
+        )
         self.eos_token = self.tokenizer.eos_token_id
-        self.max_length = self.max_length = min( 448, self.decoder.get_inputs()[0].shape[1])
-        self.use_kv_cache = use_kv_cache
-        # Dynamically determine the number of layers from the decoder model
-        self.num_layers = len([inp for inp in self.decoder_past.get_inputs() if "key" in inp.name]) // 4
-        if self.debug:
-            print(f"Detected number of layers: {self.num_layers}")
+        self.max_length = self.max_length = min(
+            448, self.decoder.get_inputs()[0].shape[1]
+        )
 
     def preprocess(self, audio):
         inputs = self.feature_extractor(
@@ -59,6 +71,7 @@ class WhisperONNX:
 
     def encode(self, input_features):
         return self.encoder.run(None, {"input_features": input_features})[0]
+
     def _extract_past(self, past_outputs):
         pkv = {}
         num_tensors = len(past_outputs)
@@ -67,23 +80,31 @@ class WhisperONNX:
             # Full encoder + decoder KV
             idx = 0
             for i in range(self.num_layers):
-                pkv[f"past_key_values.{i}.decoder.key"] = past_outputs[idx]; idx += 1
-                pkv[f"past_key_values.{i}.decoder.value"] = past_outputs[idx]; idx += 1
-                pkv[f"past_key_values.{i}.encoder.key"] = past_outputs[idx]; idx += 1
-                pkv[f"past_key_values.{i}.encoder.value"] = past_outputs[idx]; idx += 1
+                pkv[f"past_key_values.{i}.decoder.key"] = past_outputs[idx]
+                idx += 1
+                pkv[f"past_key_values.{i}.decoder.value"] = past_outputs[idx]
+                idx += 1
+                pkv[f"past_key_values.{i}.encoder.key"] = past_outputs[idx]
+                idx += 1
+                pkv[f"past_key_values.{i}.encoder.value"] = past_outputs[idx]
+                idx += 1
 
         elif num_tensors == 2 * self.num_layers:
             # Only decoder KV
             idx = 0
             for i in range(self.num_layers):
-                pkv[f"past_key_values.{i}.decoder.key"] = past_outputs[idx]; idx += 1
-                pkv[f"past_key_values.{i}.decoder.value"] = past_outputs[idx]; idx += 1
+                pkv[f"past_key_values.{i}.decoder.key"] = past_outputs[idx]
+                idx += 1
+                pkv[f"past_key_values.{i}.decoder.value"] = past_outputs[idx]
+                idx += 1
 
         else:
-            raise RuntimeError(f"Unexpected number of past tensors: {num_tensors}. Expected {4 * self.num_layers} or {2 * self.num_layers}.")
+            raise RuntimeError(
+                f"Unexpected number of past tensors: {num_tensors}. Expected {4 * self.num_layers} or {2 * self.num_layers}."
+            )
 
         return pkv
-    
+
     def decode(self, encoder_out):
         tokens = [self.sot_token]
         token_id = self.sot_token
@@ -96,13 +117,11 @@ class WhisperONNX:
                 if step == 0:
                     ort_inputs = {
                         "input_ids": np.array([[token_id]], dtype=np.int64),
-                        "encoder_hidden_states": encoder_out
+                        "encoder_hidden_states": encoder_out,
                     }
                     outputs = self.decoder_init.run(None, ort_inputs)
                 else:
-                    ort_inputs = {
-                        "input_ids": np.array([[token_id]], dtype=np.int64)
-                    }
+                    ort_inputs = {"input_ids": np.array([[token_id]], dtype=np.int64)}
                     ort_inputs.update(past_kv)
                     ort_inputs.update(encoder_kv)
                     outputs = self.decoder_past.run(None, ort_inputs)
@@ -122,7 +141,9 @@ class WhisperONNX:
 
                 next_token = int(np.argmax(logits[0, -1]))
                 if self.debug:
-                    print(f"Step {step} → {next_token} ({self.tokenizer.decode([next_token])})")
+                    print(
+                        f"Step {step} → {next_token} ({self.tokenizer.decode([next_token])})"
+                    )
 
                 if next_token == self.eos_token:
                     print("EOS reached, stopping.")
@@ -139,7 +160,8 @@ class WhisperONNX:
                 decoder_input[0, : len(tokens)] = tokens
 
                 logits = self.decoder.run(
-                    None, {"input_ids": decoder_input, "encoder_hidden_states": encoder_out}
+                    None,
+                    {"input_ids": decoder_input, "encoder_hidden_states": encoder_out},
                 )[0]
                 next_token = int(np.argmax(logits[0, len(tokens) - 1]))
                 if next_token == self.eos_token:
@@ -151,7 +173,6 @@ class WhisperONNX:
             print("\n🗣️ Tokens:", tokens)
             print("📝 Transcription:", transcription)
         return tokens
-
 
     def transcribe(self, audio, chunk_length_s=30, is_mic=False):
         """
@@ -239,7 +260,7 @@ class WhisperONNX:
             decoder_provider=providers,
             model_type=args.model_type,
             use_kv_cache=args.use_kv_cache,
-            debug=args.debug
+            debug=args.debug,
         )
 
         # Ensure at least one input is provided

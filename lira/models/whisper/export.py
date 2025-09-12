@@ -14,7 +14,7 @@ STATIC_PARAMS = {
     "batch_size": "1",
     "encoder_sequence_length / 2": "1500",
     "decoder_sequence_length": "448",
-    "decoder_kv_sequence_length": "1"
+    "decoder_kv_sequence_length": "1",
 }
 
 
@@ -138,14 +138,18 @@ if __name__ == "__main__":
 
     if os.path.exists(decoder_model_path):
         # Create static version of decoder_init_model.onnx
-        decoder_init_model_path = os.path.join(args.output_dir, "decoder_init_model.onnx")
+        decoder_init_model_path = os.path.join(
+            args.output_dir, "decoder_init_model.onnx"
+        )
         kv_params_to_fix = args.params_to_fix.copy()
-        kv_params_to_fix["decoder_sequence_length"] = kv_params_to_fix["decoder_kv_sequence_length"]
+        kv_params_to_fix["decoder_sequence_length"] = kv_params_to_fix[
+            "decoder_kv_sequence_length"
+        ]
         fix_static_shapes(decoder_model_path, decoder_init_model_path, kv_params_to_fix)
 
-
         static_decoder_model_path = os.path.join(args.output_dir, "decoder_model.onnx")
-        fix_static_shapes(decoder_model_path, static_decoder_model_path, args.params_to_fix)
+        fix_static_shapes(
+            decoder_model_path, static_decoder_model_path, args.params_to_fix
+        )
 
-        
     print("Model export and static shape conversion completed successfully.")
