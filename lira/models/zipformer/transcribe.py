@@ -78,12 +78,10 @@ class ZipformerONNX:
         # Fetch providers from model configuration based on the device
         print("Using providers:", get_provider(device, "zipformer", "encoder"))
         self.encoder = EncoderWrapper(
-            encoder_path,
-            providers=get_provider(device, "zipformer", "encoder")
+            encoder_path, providers=get_provider(device, "zipformer", "encoder")
         )
         self.decoder = DecoderWrapper(
-            decoder_path,
-            providers=get_provider(device, "zipformer", "decoder")
+            decoder_path, providers=get_provider(device, "zipformer", "decoder")
         )
         self.joiner = JoinerWrapper(
             joiner_path, providers=get_provider(device, "zipformer", "joiner")

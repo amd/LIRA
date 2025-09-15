@@ -35,7 +35,7 @@ class WhisperONNX:
             )
             self.decoder_past = ort.InferenceSession(
                 decoder_past_path,
-                providers=["CPUExecutionProvider"], # Not supported on NPU
+                providers=["CPUExecutionProvider"],  # Not supported on NPU
             )
             self.num_layers = (
                 len(
@@ -46,20 +46,17 @@ class WhisperONNX:
         else:
 
             self.decoder = ort.InferenceSession(
-            decoder_path,
-            providers=decoder_provider,
+                decoder_path,
+                providers=decoder_provider,
             )
             self.max_length = self.max_length = min(
-            448, self.decoder.get_inputs()[0].shape[1]
+                448, self.decoder.get_inputs()[0].shape[1]
             )
 
-        self.encoder = ort.InferenceSession(
-            encoder_path,
-            providers=encoder_provider
-        )
+        self.encoder = ort.InferenceSession(encoder_path, providers=encoder_provider)
         tokenizer_dir = Path(encoder_path).parent
         print(
-         f"\nLoading tokenizer and feature extractor from: {Path(tokenizer_dir).resolve()}"
+            f"\nLoading tokenizer and feature extractor from: {Path(tokenizer_dir).resolve()}"
         )
         self.feature_extractor = WhisperFeatureExtractor.from_pretrained(
             tokenizer_dir, local_files_only=True
@@ -72,7 +69,6 @@ class WhisperONNX:
             self.tokenizer.convert_tokens_to_ids("<|startoftranscript|>")
         )
         self.eos_token = self.tokenizer.eos_token_id
-        
 
     def preprocess(self, audio):
         inputs = self.feature_extractor(

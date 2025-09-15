@@ -9,13 +9,17 @@ MODEL_CONFIG_PATH = CONFIG_DIR / "model_config.json"
 # DATASETS_DIR = PROJECT_ROOT / "datasets"
 # EXPORTED_MODELS_DIR = PROJECT_ROOT / "exported_models"
 
+
 def get_cache_dir():
     """Returns the path to the project's cache directory."""
     cache_dir = Path.home() / ".cache" / "lira"
     cache_dir.mkdir(parents=True, exist_ok=True)
     return cache_dir
 
-def get_provider(device, model, component, cache_dir=None, config_path=MODEL_CONFIG_PATH):
+
+def get_provider(
+    device, model, component, cache_dir=None, config_path=MODEL_CONFIG_PATH
+):
     """
     Selects the appropriate ONNX Runtime provider and options based on the device, model, and component.
 
@@ -45,12 +49,16 @@ def get_provider(device, model, component, cache_dir=None, config_path=MODEL_CON
         # Extract the config file path
         config_file = device_config.get("config_file")
         if not config_file:
-            print(f"Config file for component '{component}' in model '{model}' not found. Falling back to CPUExecutionProvider.")
+            print(
+                f"Config file for component '{component}' in model '{model}' not found. Falling back to CPUExecutionProvider."
+            )
             return ["CPUExecutionProvider"]
 
         config_file_path = Path(config_file)
         if not config_file_path.exists():
-            raise FileNotFoundError(f"Config file '{config_file}' for component '{component}' does not exist.")
+            raise FileNotFoundError(
+                f"Config file '{config_file}' for component '{component}' does not exist."
+            )
 
         # Set cache directory
         if cache_dir is None:

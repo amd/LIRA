@@ -28,6 +28,7 @@ def extract_fbank(audio):
         use_energy=False,
     ).numpy()
 
+
 def greedy_search(encoder, decoder, joiner, features, tokens, state):
     context_size = 2
     hyp = state.get("hyp", [BLANK_ID])

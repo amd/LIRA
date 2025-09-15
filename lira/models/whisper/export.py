@@ -56,6 +56,7 @@ def parse_args():
 
     return args
 
+
 def export_with_optimum_cli(model_name, output_dir, opset):
     """Run the optimum-cli export command to generate ONNX models."""
     command = [
@@ -63,7 +64,7 @@ def export_with_optimum_cli(model_name, output_dir, opset):
         "export",
         "onnx",
         "--model",
-        f'openai/{model_name}',
+        f"openai/{model_name}",
         "--opset",
         str(opset),
         output_dir,
@@ -93,7 +94,7 @@ def force_set_static(model_path, output_path, mapping):
             for dim in shape.dim:
                 if dim.dim_param in mapping:
                     dim.dim_value = int(mapping[dim.dim_param])
-        
+
     patch_value_info(model.graph.input)
     patch_value_info(model.graph.output)
     patch_value_info(model.graph.value_info)
@@ -102,7 +103,9 @@ def force_set_static(model_path, output_path, mapping):
     print(f"Forced static shapes written to {output_path}")
 
 
-def export_whisper_model(model_name, output_dir=None, opset=17, static=False, force=False):
+def export_whisper_model(
+    model_name, output_dir=None, opset=17, static=False, force=False
+):
     """Exports the Whisper model and fixes static shapes if required."""
     # Set default output directory to project cache if not specified
     if output_dir is None:
@@ -137,7 +140,9 @@ def export_whisper_model(model_name, output_dir=None, opset=17, static=False, fo
         shutil.copy(decoder_model_path, decoder_init_model_path)
 
         # Set the copied model to static using STATIC_PARAMS_KV
-        force_set_static(decoder_init_model_path, decoder_init_model_path, STATIC_PARAMS_KV)
+        force_set_static(
+            decoder_init_model_path, decoder_init_model_path, STATIC_PARAMS_KV
+        )
 
         static_decoder_model_path = os.path.join(output_dir, "decoder_model.onnx")
         force_set_static(decoder_model_path, static_decoder_model_path, STATIC_PARAMS)
