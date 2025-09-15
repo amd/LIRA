@@ -72,7 +72,7 @@ def setup_openai_server(model_type, device):
                 f"Exporting model {model_type} for device {device} to {output_dir}..."
             )
             export_whisper_model(
-                model_name=f"openai/{model_type}",
+                model_name=model_type,
                 output_dir=str(output_dir),
                 opset=17,
                 static=True,

@@ -7,7 +7,7 @@ import torchaudio
 from pathlib import Path
 from jiwer import wer, cer
 
-from lira.utils.audio import get_model_providers
+from lira.utils.config import get_provider
 from lira.models.whisper.export import export_whisper_model
 
 SAMPLE_RATE = 16000
@@ -21,22 +21,21 @@ class WhisperONNX:
         decoder_path,
         encoder_provider,
         decoder_provider,
+        decoder_init_provider,
         decoder_init_path=None,
         decoder_past_path=None,
-        model_type="whisper-base",
         use_kv_cache=False,
         profile=False,
     ):
-        self.encoder = ort.InferenceSession(encoder_path, providers=encoder_provider)
-        self.decoder = ort.InferenceSession(decoder_path, providers=decoder_provider)
-
         self.use_kv_cache = use_kv_cache
         if self.use_kv_cache:
             self.decoder_init = ort.InferenceSession(
-                decoder_init_path, providers=decoder_provider
+                decoder_init_path,
+                providers=decoder_init_provider,
             )
             self.decoder_past = ort.InferenceSession(
-                decoder_past_path, providers=decoder_provider
+                decoder_past_path,
+                providers=["CPUExecutionProvider"], # Not supported on NPU
             )
             self.num_layers = (
                 len(
@@ -44,11 +43,23 @@ class WhisperONNX:
                 )
                 // 4
             )
+        else:
 
-        # Determine tokenizer directory
+            self.decoder = ort.InferenceSession(
+            decoder_path,
+            providers=decoder_provider,
+            )
+            self.max_length = self.max_length = min(
+            448, self.decoder.get_inputs()[0].shape[1]
+            )
+
+        self.encoder = ort.InferenceSession(
+            encoder_path,
+            providers=encoder_provider
+        )
         tokenizer_dir = Path(encoder_path).parent
         print(
-            f"\nLoading tokenizer and feature extractor from: {Path(tokenizer_dir).resolve()}"
+         f"\nLoading tokenizer and feature extractor from: {Path(tokenizer_dir).resolve()}"
         )
         self.feature_extractor = WhisperFeatureExtractor.from_pretrained(
             tokenizer_dir, local_files_only=True
@@ -61,9 +72,7 @@ class WhisperONNX:
             self.tokenizer.convert_tokens_to_ids("<|startoftranscript|>")
         )
         self.eos_token = self.tokenizer.eos_token_id
-        self.max_length = self.max_length = min(
-            448, self.decoder.get_inputs()[0].shape[1]
-        )
+        
 
     def preprocess(self, audio):
         inputs = self.feature_extractor(
@@ -279,16 +288,14 @@ class WhisperONNX:
             args.model = args.export_dir
 
         # Load providers based on device
-        providers = get_model_providers(args.model_type, args.device)
-
         whisper = WhisperONNX(
             encoder_path=f"{args.model}/encoder_model.onnx",
             decoder_path=f"{args.model}/decoder_model.onnx",
             decoder_init_path=f"{args.model}/decoder_init_model.onnx",
             decoder_past_path=f"{args.model}/decoder_with_past_model.onnx",
-            encoder_provider=providers,
-            decoder_provider=providers,
-            model_type=args.model_type,
+            encoder_provider=get_provider(args.device, args.model_type, "encoder"),
+            decoder_provider=get_provider("cpu", args.model_type, "decoder"),
+            decoder_init_provider=get_provider("cpu", args.model_type, "decoder_init"),
             use_kv_cache=args.use_kv_cache,
             profile=args.profile,
         )
@@ -307,7 +314,8 @@ class WhisperONNX:
                 args.audio,
             )
             print("\nTranscription:", transcription)
-            print(f"Real-Time Factor (RTF): {rtf:.2f}")
+            if args.profile:
+                print(f"Real-Time Factor (RTF): {rtf:.2f}")
 
     @staticmethod
     def evaluate(model, dataset_dir, results_dir):

@@ -1,7 +1,7 @@
 import numpy as np
 import onnxruntime as ort
 import torchaudio
-from lira.utils.audio import get_model_providers, get_providers
+from lira.utils.config import get_provider
 from lira.utils.audio import extract_fbank
 from lira.utils.tokens import load_tokens
 from lira.utils.audio import greedy_search
@@ -76,18 +76,17 @@ class ZipformerONNX:
         config_path="config/model_config.json",
     ):
         # Fetch providers from model configuration based on the device
-        providers_config = get_model_providers("zipformer", device, config_path)
-
+        print("Using providers:", get_provider(device, "zipformer", "encoder"))
         self.encoder = EncoderWrapper(
             encoder_path,
-            providers=providers_config.get("encoder", get_providers(device)),
+            providers=get_provider(device, "zipformer", "encoder")
         )
         self.decoder = DecoderWrapper(
             decoder_path,
-            providers=providers_config.get("decoder", get_providers(device)),
+            providers=get_provider(device, "zipformer", "decoder")
         )
         self.joiner = JoinerWrapper(
-            joiner_path, providers=providers_config.get("joiner", get_providers(device))
+            joiner_path, providers=get_provider(device, "zipformer", "joiner")
         )
         self.tokens_path = tokens
         self.device = device
