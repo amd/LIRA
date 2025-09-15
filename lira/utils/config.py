@@ -35,6 +35,7 @@ def get_provider(
     """
     # Normalize model name for variations like whisper-base, whisper-small, etc.
     if model.startswith("whisper"):
+        cache_key_startswith = model.replace("-", "_")
         model = "whisper"
 
     if device == "npu":
@@ -67,9 +68,9 @@ def get_provider(
         # Generate provider options
         options = {
             "cache_dir": str(cache_dir),
-            "cache_key": f"{model}_{component}",
+            "cache_key": f"{cache_key_startswith}_{component}",
             "config_file": str(config_file_path),
-            "enable_cache_file_io_in_mem": 0,
+            # "enable_cache_file_io_in_mem": 0,
         }
 
         return [("VitisAIExecutionProvider", options)]

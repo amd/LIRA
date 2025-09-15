@@ -28,6 +28,11 @@ class WhisperONNX:
         profile=False,
     ):
         self.use_kv_cache = use_kv_cache
+
+        # Initialize encoder FIRST to match run_whisper.py order
+        print("Encoder: ", encoder_provider)
+        self.encoder = ort.InferenceSession(encoder_path, providers=encoder_provider)
+
         if self.use_kv_cache:
             self.decoder_init = ort.InferenceSession(
                 decoder_init_path,
@@ -44,16 +49,16 @@ class WhisperONNX:
                 // 4
             )
         else:
-
+            print("INTIIALIZING DECODER")
             self.decoder = ort.InferenceSession(
                 decoder_path,
                 providers=decoder_provider,
             )
-            self.max_length = self.max_length = min(
-                448, self.decoder.get_inputs()[0].shape[1]
-            )
+            self.max_length = min(448, self.decoder.get_inputs()[0].shape[1])
+            print(f"DEBUG: max_length set to {self.max_length}")
+            if not isinstance(self.max_length, int):
+                raise ValueError("Invalid/Dynamic input shapes")
 
-        self.encoder = ort.InferenceSession(encoder_path, providers=encoder_provider)
         tokenizer_dir = Path(encoder_path).parent
         print(
             f"\nLoading tokenizer and feature extractor from: {Path(tokenizer_dir).resolve()}"
@@ -77,7 +82,10 @@ class WhisperONNX:
         return inputs["input_features"]
 
     def encode(self, input_features):
-        return self.encoder.run(None, {"input_features": input_features})[0]
+        print(f"DEBUG: encode() called with input shape: {input_features.shape}")
+        result = self.encoder.run(None, {"input_features": input_features})[0]
+        print(f"DEBUG: encode() completed, output shape: {result.shape}")
+        return result
 
     def _extract_past(self, past_outputs):
         pkv = {}
@@ -113,7 +121,7 @@ class WhisperONNX:
         return pkv
 
     def decode(self, encoder_out):
-        tokens = [self.sot_token]
+        tokens = [self.decoder_start_token]
         token_id = self.sot_token
         past_kv = None
         encoder_kv = {}
@@ -155,33 +163,49 @@ class WhisperONNX:
                 token_id = next_token
         else:
             print("Using non-KV Cache logic")
-            for _ in range(self.max_length):
+            print(f"DEBUG: Starting decode with max_length={self.max_length}")
+            for i in range(self.max_length):
                 decoder_input = np.full(
                     (1, self.max_length), self.eos_token, dtype=np.int64
                 )
                 decoder_input[0, : len(tokens)] = tokens
 
+                print(
+                    f"DEBUG: Step {i+1}, tokens so far: {len(tokens)}, decoder_input shape: {decoder_input.shape}"
+                )
                 logits = self.decoder.run(
                     None,
                     {"input_ids": decoder_input, "encoder_hidden_states": encoder_out},
                 )[0]
                 next_token = int(np.argmax(logits[0, len(tokens) - 1]))
+                print(f"DEBUG: Next token: {next_token}")
                 if next_token == self.eos_token:
+                    print("DEBUG: EOS token reached, breaking")
                     break
                 tokens.append(next_token)
 
         return tokens
 
-    def transcribe(self, audio_path):
+    def transcribe(self, audio_input):
         """
-        Transcribe the given audio file.
+        Transcribe the given audio file or audio data.
         """
-        input_features, audio_duration = self.preprocess_audio(audio_path)
+        if isinstance(audio_input, (str, Path)):
+            # File path input
+            input_features, audio_duration = self.preprocess_audio(audio_input)
+        else:
+            # Raw audio data input (numpy array)
+            input_features = self.preprocess(audio_input)
+            audio_duration = len(audio_input) / SAMPLE_RATE
 
         # Time only the decoding step if profiling is enabled
         start_time = time.time() if self.profile else None
+        print("DEBUG: About to run encoder...")
         encoder_out = self.encode(input_features)
+        print(f"DEBUG: Encoder output shape: {encoder_out.shape}")
+        print("DEBUG: About to run decoder...")
         tokens = self.decode(encoder_out)
+        print("DEBUG: Decoder completed")
         end_time = time.time() if self.profile else None
 
         transcription = self.tokenizer.decode(tokens, skip_special_tokens=True).strip()
@@ -233,6 +257,11 @@ class WhisperONNX:
             default="cpu",
             choices=["cpu", "npu", "igpu"],
             help="Device to run the model on (default: cpu)",
+        )
+        whisper_parser.add_argument(
+            "--cache",
+            default=None,
+            help="Path to cache directory (default: ~/.cache/lira)",
         )
         whisper_parser.add_argument(
             "--eval-dir", help="Dataset directory with wavs/ and transcripts.txt"
@@ -289,9 +318,15 @@ class WhisperONNX:
             decoder_path=f"{args.model}/decoder_model.onnx",
             decoder_init_path=f"{args.model}/decoder_init_model.onnx",
             decoder_past_path=f"{args.model}/decoder_with_past_model.onnx",
-            encoder_provider=get_provider(args.device, args.model_type, "encoder"),
-            decoder_provider=get_provider("cpu", args.model_type, "decoder"),
-            decoder_init_provider=get_provider("cpu", args.model_type, "decoder_init"),
+            encoder_provider=get_provider(
+                args.device, args.model_type, "encoder", cache_dir=args.cache
+            ),
+            decoder_provider=get_provider(
+                args.device, args.model_type, "decoder", cache_dir=args.cache
+            ),
+            decoder_init_provider=get_provider(
+                args.device, args.model_type, "decoder_init", cache_dir=args.cache
+            ),
             use_kv_cache=args.use_kv_cache,
             profile=args.profile,
         )
