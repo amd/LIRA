@@ -12,7 +12,7 @@ LIRA is a CLI-first, developer-friendly tool: run and serve ASR models locally w
 
 - Python 3.10 is required.
 - We recommend using conda for environment management.
-- If you plan to use the RyzenAI NPU flow, follow the [RyzenAI installation instructions](https://ryzenai.docs.amd.com/en/latest/inst.html)and verify drivers/runtime are installed for your device.
+- If you plan to use the RyzenAI NPU flow, follow the [RyzenAI installation instructions](https://ryzenai.docs.amd.com/en/latest/inst.html) and verify drivers/runtime are installed for your device.
 
 After the prerequisites are satisfied, the minimal install steps are:
 1. Clone the repo and change directory:
