@@ -1,69 +1,131 @@
-# LIRA
+# LIRA: Local Inference tool for Realtime Audio
+![LIRA logo](images/logo.png)
 
-LIRA is a lightweight, modular toolkit for running and comparing speech models and chained tooling. It provides an extensible CLI and server components to run ONNX-based models (Whisper, Zipformer, and others), experiment with exports, and integrate additional processing tools.
+Bring the power of speech locally — fast, high-performance ASR that's simple to run on your machine.
 
-This repository contains model export artifacts, example datasets, utilities, and a production-capable server aimed at making speech-model experimentation and deployment frictionless.
+LIRA is a CLI-first, developer-friendly tool: run and serve ASR models locally with `lira run` and `lira serve` to integrate with your apps and tools.
 
-Note: parts of LIRA are early-access and under active development. We welcome contributions and collaboration to make the project more stable and user-friendly.
+---
+## Getting Started
+
+**Prerequisites**:
+
+- Python 3.10 is required.
+- We recommend using conda for environment management.
+- If you plan to use the RyzenAI NPU flow, follow the [RyzenAI installation instructions](https://ryzenai.docs.amd.com/en/latest/inst.html)and verify drivers/runtime are installed for your device.
+
+After the prerequisites are satisfied, the minimal install steps are:
+1. Clone the repo and change directory:
+
+    ```bash
+    git clone https://github.com/aigdat/LIRA.git
+    cd LIRA
+    ```
+
+2. Activate your conda environment (example used in development):
+
+    ```bash
+    conda activate ryzen-ai-1.5.0
+    ```
+
+3. Install LIRA in editable mode so the `lira` entrypoint is available:
+
+    ```bash
+    pip install -e .
+    ```
+
+Now you can run `lira --help` to see available commands.
+
+---
+## Running the server
+
+LIRA includes a FastAPI-based HTTP server designed for rapid integration with your applications. The server offers OpenAI API compatibility, making it easy to connect existing tools and workflows for real-time speech recognition.
+
+Start the server:
+```bash
+lira serve --backend openai --model whisper-base --device cpu --host 0.0.0.0 --port 5000
+```
+
+- Configure models via `config/model_config.json`.
+- Set API keys (dummy) as environment variables for protected backends.
+
+
+## How to use the CLI
+To run a model using the CLI, use the following syntax:
+
+```bash
+lira run <model> [options]
+```
+
+Replace `<model>` with the model name or path, and specify any required options or flags as needed.
+
+Core flags (common to most models):
+
+- `--device` — target device (`cpu`, `gpu`, `npu`).
+- `-m` / `--model` — path to a local exported model directory (ONNX files + tokenizer/config).
+- `--audio` — path to the input audio file (wav).
+- `--profile` — enable simple timing/profiling output.
+
+Tip: run `lira run <model> --help` to see model-specific flags.
 
 ---
 
-## Key Features
+### Running Whisper
 
-- Simple CLI to run models and utilities:
-  - `lira run` — run a single model and optionally chain tools
-  - `lira serve` — start the LIRA server for programmatic access
-- Supports ONNX-exported models for CPU/NPU execution paths
-- Example audio and transcripts in `datasets/` and `audio_files/`
-- Modular code organization to add new models, tools, and backends
+Whisper has built-in export/optimization support and a few model-specific flags.
 
+#### Example
+
+To export and run Whisper:
+
+```bash
+# Export the Whisper base model to ONNX format, optimize and run on NPU
+lira run whisper --model-type whisper-base --export --device npu --audio <input/.wav file> --use-kv-cache
+# Run inference on a sample audio file
+lira run whisper -m exported_models/whisper_base --device cpu --audio "audio_files/61-70968-0000.wav"
+```
+
+**Usage:**
+
+- The first command exports the Whisper base model to the specified directory.
+- The second command runs the exported model on a WAV audio file using the CPU.
+- Replace `"audio_files/61-70968-0000.wav"` with your own audio file path as needed.
+- Use `--help` with any command for more options and model-specific flags.
+Key Whisper flags:
+
+- `--model-type` — Hugging Face model id (e.g. `whisper-base`, `whisper-small`).
+- `--export` — export/prepare a Whisper model into an ONNX export (goes to `--export-dir`).
+- `--export-dir` — output path for the export (default: `exported_models`).
+- `--force` — when used with `--export`, overwrite an existing export.
+- `--use-kv-cache` — enable KV-cache decoding (requires KV-capable exports).
+- `--static` — request static shapes during export.
+- `--opset` — ONNX opset version for export (default: `17`).
+- `--eval-dir` / `--results-dir` — run dataset evaluation and store results.
 ---
 
-## Quickstart
+### Running Zipformer
 
-Minimum steps to get started from source (Windows PowerShell example):
+Zipformer enables streaming, low-latency transcription for real-time ASR tasks.
 
-1. Clone the repository:
+#### Example Usage
 
-   git clone https://github.com/aigdat/LIRA.git
-   cd LIRA
+To run a Zipformer model:
 
-2. Create a Python environment and install dependencies:
+```bash
+lira run zipformer -m <exported_model_dir> --device cpu --audio "audio_files/stream_sample.wav"
+```
 
-   python -m venv .venv; .\.venv\Scripts\Activate.ps1
-   pip install -r requirements.txt
+Replace `<exported_model_dir>` with the path to your exported Zipformer model directory.
 
-3. Run the CLI help to see available commands:
+### Common CLI Flags
 
-   python -m lira.cli -h
+- `-m`, `--model` — Path to the exported Zipformer model directory.
+- `--device` — Target device (`cpu`, `gpu`, `npu`).
+- `--audio` — Path to the input audio file (WAV format).
+- `--cache` — Optional cache directory for intermediate data.
+- `--profile` — Enable simple timing/profiling output.
 
-Or run a model (example):
-
-   python -m lira.cli run whisper --input audio_files/61-70968-0000.wav
-
-Start the local server (example):
-
-   python -m lira.cli serve --backend openai --model whisper-base --device cpu --host 0.0.0.0 --port 5000
-
----
-
-## CLI Overview
-
-All CLI entry points are implemented in `lira/cli.py`. Primary commands:
-
-- `run` — Runs a single model. Subcommands are provided per model (e.g., `whisper`, `zipformer`) and expose model-specific flags.
-  - Example: `lira run whisper --input <file> --device cpu`
-
-- `compare` — Compare multiple models on the same audio input.
-  - Example: `lira compare --models whisper zipformer --input audio.wav`
-
-- `tool` — Run a standalone helper tool or chain tools together.
-  - Example: `lira tool --name normalize --args --level 0.8`
-
-- `serve` — Start the LIRA HTTP server to serve model inference and tool endpoints.
-  - Example: `lira serve --backend openai --model whisper-base --device cpu`
-
-Refer to `lira/cli.py` to see model-specific CLI extensions and flags.
+Tip: Run `lira run zipformer --help` for a full list of supported flags and options.
 
 ---
 
@@ -78,13 +140,20 @@ When running the server or CLI, you can point to custom config files or modify t
 
 ---
 
-## Models & Exports
+## Supported Model Architectures & Runtimes
 
-The repo contains several exported model artifacts for experimentation under `exported_models/` and `exported_models_small/`. These include encoder/decoder ONNX files and tokenizer/artifacts required to run the models.
+LIRA includes integrations and exported artifacts for multiple common speech-model architectures. Runtime support depends on the specific exported model variant and the chosen runtime (CPU/GPU/NPU). Always verify the exact export and config on this table before deploying.
 
-If you add additional exports, please follow the existing layout and add a short README or config entry describing source model, export tool, and verification steps.
+| Model | Typical use case | Runs on | Supported datatypes |
+|---|---|---:|---:|
+| Whisper (small) | Low-latency, resource-constrained inference | CPU, GPU, NPU* | float32, float16, int8 (quantized variants)
+| Whisper (base) | Balanced accuracy and performance | CPU, GPU, NPU* | float32, float16, int8 (quantized variants)
+| Whisper (medium) | Higher accuracy for challenging audio | CPU, GPU, NPU* | float32, float16
+| Whisper (large) | Highest accuracy (more compute) | CPU, GPU | float32, float16
+| Zipformer | Streaming / low-latency ASR encoder | CPU, GPU, NPU* | float32, float16
 
----
+* NPU support depends on available Vitis AI export artifacts and the target NPU hardware. 
+
 
 ## Datasets & Examples
 
@@ -139,7 +208,7 @@ Contributions that align with these goals are highly welcome.
 
 ## License
 
-This project is intended to be open-source. Please confirm the LICENSE file in this repository for the exact terms. If a `LICENSE` file is missing, please contact maintainers before using for commercial purposes.
+
 
 ---
 
@@ -152,16 +221,3 @@ Thank you for trying LIRA — we look forward to your contributions and feedback
 
 ---
 
-## Supported Model Architectures & Runtimes
-
-LIRA includes integrations and exported artifacts for multiple common speech-model architectures. Runtime support depends on the specific exported model variant and the chosen runtime (CPU/GPU/NPU). Always verify the exact export and config under `exported_models/` before deploying.
-
-| Model | Typical use case | Runs on | Supported datatypes |
-|---|---|---:|---:|
-| Whisper (small) | Low-latency, resource-constrained inference | CPU, GPU, NPU* | float32, float16, int8 (quantized variants)
-| Whisper (base) | Balanced accuracy and performance | CPU, GPU, NPU* | float32, float16, int8 (quantized variants)
-| Whisper (medium) | Higher accuracy for challenging audio | CPU, GPU, NPU* | float32, float16
-| Whisper (large) | Highest accuracy (more compute) | CPU, GPU | float32, float16
-| Zipformer | Streaming / low-latency ASR encoder | CPU, GPU, NPU* | float32, float16
-
-* NPU support depends on available Vitis AI export artifacts and the target NPU hardware. Many NPU flows favor float16 or int8 quantized exports — check `exported_modelsvitisai_cache/` and the corresponding `vitisai_config_*.json` files for details.

@@ -55,7 +55,6 @@ class WhisperONNX:
                 providers=decoder_provider,
             )
             self.max_length = min(448, self.decoder.get_inputs()[0].shape[1])
-            print(f"DEBUG: max_length set to {self.max_length}")
             if not isinstance(self.max_length, int):
                 raise ValueError("Invalid/Dynamic input shapes")
 
@@ -82,9 +81,7 @@ class WhisperONNX:
         return inputs["input_features"]
 
     def encode(self, input_features):
-        print(f"DEBUG: encode() called with input shape: {input_features.shape}")
         result = self.encoder.run(None, {"input_features": input_features})[0]
-        print(f"DEBUG: encode() completed, output shape: {result.shape}")
         return result
 
     def _extract_past(self, past_outputs):
@@ -162,25 +159,18 @@ class WhisperONNX:
                 tokens.append(next_token)
                 token_id = next_token
         else:
-            print("Using non-KV Cache logic")
-            print(f"DEBUG: Starting decode with max_length={self.max_length}")
+            print(f"Using non-KV Cache logic")
             for i in range(self.max_length):
                 decoder_input = np.full(
                     (1, self.max_length), self.eos_token, dtype=np.int64
                 )
                 decoder_input[0, : len(tokens)] = tokens
-
-                print(
-                    f"DEBUG: Step {i+1}, tokens so far: {len(tokens)}, decoder_input shape: {decoder_input.shape}"
-                )
                 logits = self.decoder.run(
                     None,
                     {"input_ids": decoder_input, "encoder_hidden_states": encoder_out},
                 )[0]
                 next_token = int(np.argmax(logits[0, len(tokens) - 1]))
-                print(f"DEBUG: Next token: {next_token}")
                 if next_token == self.eos_token:
-                    print("DEBUG: EOS token reached, breaking")
                     break
                 tokens.append(next_token)
 
@@ -200,12 +190,8 @@ class WhisperONNX:
 
         # Time only the decoding step if profiling is enabled
         start_time = time.time() if self.profile else None
-        print("DEBUG: About to run encoder...")
         encoder_out = self.encode(input_features)
-        print(f"DEBUG: Encoder output shape: {encoder_out.shape}")
-        print("DEBUG: About to run decoder...")
         tokens = self.decode(encoder_out)
-        print("DEBUG: Decoder completed")
         end_time = time.time() if self.profile else None
 
         transcription = self.tokenizer.decode(tokens, skip_special_tokens=True).strip()
@@ -243,9 +229,7 @@ class WhisperONNX:
     @staticmethod
     def parse_cli(subparsers):
         whisper_parser = subparsers.add_parser("whisper", help="Run Whisper model")
-        whisper_parser.add_argument(
-            "-m", "--model", required=True, help="Model name or path"
-        )
+        whisper_parser.add_argument("-m", "--model", help="Model name or path")
         whisper_parser.add_argument("--audio", help="Path to audio file")
         whisper_parser.add_argument(
             "--model-type",
@@ -292,6 +276,7 @@ class WhisperONNX:
         )
         whisper_parser.add_argument(
             "--static",
+            default=True,
             action="store_true",
             help="Use static shape parameters for export",
         )
@@ -300,6 +285,14 @@ class WhisperONNX:
     @staticmethod
     def run(args):
         print(f"Running Whisper model: {args.model}")
+
+        # Require either a model dir (via -m/--model) or the --export flag.
+        if not args.model and not args.export:
+            print(
+                "Error: You must provide a model "
+                "directory with -m/--model or use --export to export a model first."
+            )
+            return
 
         if args.export:
             print("Exporting model...")
