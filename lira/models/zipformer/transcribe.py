@@ -1,3 +1,5 @@
+# Copyright(C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+
 import numpy as np
 import onnxruntime as ort
 import torchaudio

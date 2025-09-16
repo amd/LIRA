@@ -1,3 +1,5 @@
+# Copyright(C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+ 
 import torch
 import torchaudio
 import os
