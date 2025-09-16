@@ -1,3 +1,5 @@
+# Copyright(C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+
 import os
 import gradio as gr
 import torchaudio
