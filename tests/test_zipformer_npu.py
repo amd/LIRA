@@ -23,7 +23,7 @@ class TestZipformerONNX(unittest.TestCase):
             tokens=self.tokens_path,
             device="npu"
         )
-        transcription = zipformer.transcribe("audio_files/61-70968-0000.wav")
+        transcription = zipformer.transcribe("audio_files/test.wav")
 
         self.assertIsInstance(transcription, str)
         self.assertGreater(len(transcription), 0)

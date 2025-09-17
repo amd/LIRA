@@ -55,4 +55,13 @@ jobs:
       - name: Run LIRA tests
         shell: bash -el {0}
         run: |
-          python -m unittest tests.test_whisper_cpu tests.test_zipformer_cpu
+          python -m unittest tests.test_whisper_cpu tests.test_zipformer_cpu tests.test_openai_server
+
+      - name: Run LIRA CLI Whisper test
+        shell: bash -el {0}
+        run: |
+          lira run whisper --device cpu --model-type whisper-base --audio audio_files/test.wav --export --static
+      - name: Run LIRA CLI Zipformer test
+        shell: bash -el {0}
+        run: |
+          lira run zipformer --model aigdat/AMD-zipformer-en --device cpu --audio audio_files/test.wav

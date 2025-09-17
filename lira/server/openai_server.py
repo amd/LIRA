@@ -1,5 +1,5 @@
 # Copyright(C) 2025 Advanced Micro Devices, Inc. All rights reserved.
- 
+
 from fastapi import FastAPI, UploadFile, Form
 from fastapi.responses import JSONResponse
 import tempfile
@@ -7,6 +7,7 @@ import os
 from lira.models.whisper.transcribe import WhisperONNX, export_whisper_model
 from pathlib import Path
 from lira.utils.cache import get_cache_dir
+from lira.utils.config import get_provider
 
 app = FastAPI()
 _model = None
@@ -22,15 +23,28 @@ def load_model():
     decoder = os.path.join(model_dir, "decoder_model.onnx")
     decoder_init = os.path.join(model_dir, "decoder_init_model.onnx")
     decoder_past = os.path.join(model_dir, "decoder_with_past_model.onnx")
+    device = "cpu"
 
     _model = WhisperONNX(
         encoder_path=encoder,
         decoder_path=decoder,
         decoder_init_path=decoder_init,
         decoder_past_path=decoder_past,
-        encoder_provider=["cpu"],  # Adjust device as needed
-        decoder_provider=["cpu"],
-        model_type="whisper",
+        encoder_provider=get_provider(
+            device,
+            "whisper",
+            "encoder",
+        ),
+        decoder_provider=get_provider(
+            device,
+            "whisper",
+            "decoder",
+        ),
+        decoder_init_provider=get_provider(
+            device,
+            "whisper",
+            "decoder_init",
+        ),
         use_kv_cache=True,
     )
 

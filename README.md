@@ -85,14 +85,14 @@ To export and run Whisper:
 # Export the Whisper base model to ONNX format, optimize and run on NPU
 lira run whisper --model-type whisper-base --export --device npu --audio <input/.wav file> --use-kv-cache
 # Run inference on a sample audio file
-lira run whisper -m exported_models/whisper_base --device cpu --audio "audio_files/61-70968-0000.wav"
+lira run whisper -m exported_models/whisper_base --device cpu --audio "audio_files/test.wav"
 ```
 
 **Usage:**
 
 - The first command exports the Whisper base model to the specified directory.
 - The second command runs the exported model on a WAV audio file using the CPU.
-- Replace `"audio_files/61-70968-0000.wav"` with your own audio file path as needed.
+- Replace `"audio_files/test.wav"` with your own audio file path as needed.
 - Use `--help` with any command for more options and model-specific flags.
 
 Key Whisper flags:
