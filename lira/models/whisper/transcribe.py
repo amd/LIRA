@@ -267,6 +267,9 @@ class WhisperONNX:
             help="Export the model instead of running it",
         )
         whisper_parser.add_argument(
+            "--force", default=False, action="store_true", help="Force export even if model exists"
+        )
+        whisper_parser.add_argument(
             "--export-dir",
             default=None,
             help="Directory to export the model",
@@ -304,6 +307,7 @@ class WhisperONNX:
                 output_dir=args.export_dir,
                 opset=args.opset,
                 static=args.static,
+                force=args.force,
             )
             print("Model export completed.")
             args.model = args.export_dir
