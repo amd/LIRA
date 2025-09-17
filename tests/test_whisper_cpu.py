@@ -24,7 +24,7 @@ class TestWhisperONNX(unittest.TestCase):
 
     def test_01_whisper_base_transcribe_cpu(self):
         # Pass the audio file path directly
-        audio_path = "audio_files/61-70968-0000.wav"
+        audio_path = "audio_files/test.wav"
 
         whisper = WhisperONNX(
             encoder_path=self._encoder,
@@ -39,8 +39,7 @@ class TestWhisperONNX(unittest.TestCase):
         self.assertGreater(len(transcription), 0)
 
     def test_02_whisper_base_transcribe_cpu_kv_cache(self):
-        # Pass the audio file path directly
-        audio_path = "audio_files/61-70968-0000.wav"
+        audio_path = "audio_files/test.wav"
 
         whisper = WhisperONNX(
             encoder_path=self._encoder,

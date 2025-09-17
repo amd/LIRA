@@ -30,7 +30,6 @@ class WhisperONNX:
         self.use_kv_cache = use_kv_cache
 
         # Initialize encoder FIRST to match run_whisper.py order
-        print("Encoder: ", encoder_provider)
         self.encoder = ort.InferenceSession(encoder_path, providers=encoder_provider)
 
         if self.use_kv_cache:
@@ -49,7 +48,6 @@ class WhisperONNX:
                 // 4
             )
         else:
-            print("INTIIALIZING DECODER")
             self.decoder = ort.InferenceSession(
                 decoder_path,
                 providers=decoder_provider,

@@ -26,7 +26,7 @@ class TestWhisperONNX(unittest.TestCase):
 
     def test_02_whisper_base_transcribe_npu_kv_cache(self):
         # Pass the audio file path directly
-        audio_path = "audio_files/61-70968-0000.wav"
+        audio_path = "audio_files/test.wav"
 
         # Get model providers for encoder and decoder based on device
         device = "npu"
