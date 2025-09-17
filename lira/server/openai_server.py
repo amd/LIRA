@@ -1,3 +1,5 @@
+# Copyright(C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+ 
 from fastapi import FastAPI, UploadFile, Form
 from fastapi.responses import JSONResponse
 import tempfile

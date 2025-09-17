@@ -1,3 +1,5 @@
+# Copyright(C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+ 
 import unittest
 from lira.models.zipformer.transcribe import ZipformerONNX
 from huggingface_hub import snapshot_download

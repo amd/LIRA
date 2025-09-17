@@ -1,4 +1,5 @@
 # LIRA: Local Inference tool for Realtime Audio
+
 ![LIRA logo](images/logo.png)
 
 Bring the power of speech locally — fast, high-performance ASR that's simple to run on your machine.
@@ -15,6 +16,7 @@ LIRA is a CLI-first, developer-friendly tool: run and serve ASR models locally w
 - If you plan to use the RyzenAI NPU flow, follow the [RyzenAI installation instructions](https://ryzenai.docs.amd.com/en/latest/inst.html) and verify drivers/runtime are installed for your device.
 
 After the prerequisites are satisfied, the minimal install steps are:
+
 1. Clone the repo and change directory:
 
     ```bash
@@ -42,6 +44,7 @@ Now you can run `lira --help` to see available commands.
 LIRA includes a FastAPI-based HTTP server designed for rapid integration with your applications. The server offers OpenAI API compatibility, making it easy to connect existing tools and workflows for real-time speech recognition.
 
 Start the server:
+
 ```bash
 lira serve --backend openai --model whisper-base --device cpu --host 0.0.0.0 --port 5000
 ```
@@ -91,6 +94,7 @@ lira run whisper -m exported_models/whisper_base --device cpu --audio "audio_fil
 - The second command runs the exported model on a WAV audio file using the CPU.
 - Replace `"audio_files/test.wav"` with your own audio file path as needed.
 - Use `--help` with any command for more options and model-specific flags.
+
 Key Whisper flags:
 
 - `--model-type` — Hugging Face model id (e.g. `whisper-base`, `whisper-small`).
@@ -204,14 +208,6 @@ Planned improvements and focus areas:
 
 Contributions that align with these goals are highly welcome.
 
----
-
-## License
-
-
-
----
-
 ## Getting Help
 
 - Open an issue on GitHub with reproduction steps and logs
@@ -221,3 +217,8 @@ Thank you for trying LIRA — we look forward to your contributions and feedback
 
 ---
 
+## License
+
+This project is licensed under the terms of the MIT license. See the [LICENSE](LICENSE) file for details.
+
+Copyright(C) 2025 Advanced Micro Devices, Inc. All rights reserved.
