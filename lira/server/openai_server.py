@@ -6,8 +6,7 @@ import tempfile
 import os
 from lira.models.whisper.transcribe import WhisperONNX, export_whisper_model
 from pathlib import Path
-from lira.utils.cache import get_cache_dir
-from lira.utils.config import get_provider
+from lira.utils.config import get_provider, get_cache_dir
 
 app = FastAPI()
 _model = None

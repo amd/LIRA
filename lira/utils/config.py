@@ -18,6 +18,17 @@ def get_cache_dir():
     cache_dir.mkdir(parents=True, exist_ok=True)
     return cache_dir
 
+def get_npu_cache_dir():
+    """Returns the path to the NPU cache directory."""
+    npu_cache_dir = get_cache_dir() / "npu"
+    npu_cache_dir.mkdir(parents=True, exist_ok=True)
+    return npu_cache_dir
+
+def get_exported_cache_dir():
+    """Returns the path to the exported cache directory."""
+    exported_cache_dir = get_cache_dir() / "exported_models"
+    exported_cache_dir.mkdir(parents=True, exist_ok=True)
+    return exported_cache_dir
 
 def get_provider(
     device, model, component, cache_dir=None, config_path=MODEL_CONFIG_PATH
@@ -65,7 +76,7 @@ def get_provider(
 
         # Set cache directory
         if cache_dir is None:
-            cache_dir = get_cache_dir() / "vitisai_cache"
+            cache_dir = get_npu_cache_dir()
 
         # Generate provider options
         options = {
