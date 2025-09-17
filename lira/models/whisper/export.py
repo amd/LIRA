@@ -72,7 +72,9 @@ def export_with_optimum_cli(model_name, output_dir, opset):
         output_dir,
     ]
     print(f"Running optimum-cli export for model: {model_name}")
-    subprocess.run(command, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(
+        command, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    )
     print(f"Exported ONNX model to: {output_dir}")
 
 

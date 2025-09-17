@@ -267,7 +267,10 @@ class WhisperONNX:
             help="Export the model instead of running it",
         )
         whisper_parser.add_argument(
-            "--force", default=False, action="store_true", help="Force export even if model exists"
+            "--force",
+            default=False,
+            action="store_true",
+            help="Force export even if model exists",
         )
         whisper_parser.add_argument(
             "--export-dir",
