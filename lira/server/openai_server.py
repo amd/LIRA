@@ -1,5 +1,5 @@
 # Copyright(C) 2025 Advanced Micro Devices, Inc. All rights reserved.
- 
+
 from fastapi import FastAPI, UploadFile, Form
 from fastapi.responses import JSONResponse
 import tempfile
@@ -26,21 +26,27 @@ def load_model():
     device = "cpu"
 
     _model = WhisperONNX(
-            encoder_path=encoder,
-            decoder_path=decoder,
-            decoder_init_path=decoder_init,
-            decoder_past_path=decoder_past,
-            encoder_provider=get_provider(
-                device, "whisper", "encoder",
-            ),
-            decoder_provider=get_provider(
-                device, "whisper", "decoder",
-            ),
-            decoder_init_provider=get_provider(
-                device, "whisper", "decoder_init",
-            ),
-            use_kv_cache=True,
-        )
+        encoder_path=encoder,
+        decoder_path=decoder,
+        decoder_init_path=decoder_init,
+        decoder_past_path=decoder_past,
+        encoder_provider=get_provider(
+            device,
+            "whisper",
+            "encoder",
+        ),
+        decoder_provider=get_provider(
+            device,
+            "whisper",
+            "decoder",
+        ),
+        decoder_init_provider=get_provider(
+            device,
+            "whisper",
+            "decoder_init",
+        ),
+        use_kv_cache=True,
+    )
 
 
 @app.on_event("startup")
