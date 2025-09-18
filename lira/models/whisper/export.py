@@ -61,12 +61,13 @@ def parse_args():
 
 def export_with_optimum_cli(model_name, output_dir, opset):
     """Run the optimum-cli export command to generate ONNX models, hiding stdout/stderr."""
+    # Ensure model_name is in the format 'openai/whisper-*'
     command = [
         "optimum-cli",
         "export",
         "onnx",
         "--model",
-        f"{model_name}",
+        f"openai/{model_name}",
         "--opset",
         str(opset),
         output_dir,

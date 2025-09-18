@@ -306,7 +306,7 @@ class WhisperONNX:
                 args.export_dir = get_cache_dir() / "models" / args.model_type
             print("Exporting model...")
             export_whisper_model(
-                model_name=f"openai/{args.model_type}",
+                model_name=args.model_type,
                 output_dir=args.export_dir,
                 opset=args.opset,
                 static=args.static,
