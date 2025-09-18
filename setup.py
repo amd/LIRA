@@ -14,13 +14,13 @@ setup(
         "torch",
         "torchaudio",
         "sounddevice",
-        "transformers",
+        "transformers==4.38.0",
         "soundfile",
         "gradio",
         "jiwer",
         #dev tools
         "onnx",
-        "optimum"
+        "optimum==1.26.1"
     ],
     python_requires=">=3.7",
     entry_points={
