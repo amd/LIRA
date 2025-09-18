@@ -10,7 +10,6 @@ import json
 import sounddevice as sd
 from lira.utils.config import MODEL_CONFIG_PATH
 from pathlib import Path
-from lira.utils.cache import get_cache_dir
 
 BLANK_ID = 0
 CHUNK_LEN = 151

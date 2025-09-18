@@ -9,7 +9,7 @@ import torchaudio
 from pathlib import Path
 from jiwer import wer, cer
 
-from lira.utils.config import get_provider
+from lira.utils.config import get_provider, get_cache_dir
 from lira.models.whisper.export import export_whisper_model
 
 SAMPLE_RATE = 16000
@@ -267,8 +267,14 @@ class WhisperONNX:
             help="Export the model instead of running it",
         )
         whisper_parser.add_argument(
+            "--force",
+            default=False,
+            action="store_true",
+            help="Force export even if model exists",
+        )
+        whisper_parser.add_argument(
             "--export-dir",
-            default="exported_models",
+            default=None,
             help="Directory to export the model",
         )
         whisper_parser.add_argument(
@@ -284,9 +290,10 @@ class WhisperONNX:
 
     @staticmethod
     def run(args):
-        print(f"Running Whisper model: {args.model}")
+        print(f"Running Whisper model: {args.model_type}")
+        if args.model:
+            print("Model Location: ", args.model)
 
-        # Require either a model dir (via -m/--model) or the --export flag.
         if not args.model and not args.export:
             print(
                 "Error: You must provide a model "
@@ -295,12 +302,15 @@ class WhisperONNX:
             return
 
         if args.export:
+            if args.export_dir is None:
+                args.export_dir = get_cache_dir() / "models" / args.model_type
             print("Exporting model...")
             export_whisper_model(
-                model_name=f"openai/{args.model_type}",
+                model_name=args.model_type,
                 output_dir=args.export_dir,
                 opset=args.opset,
                 static=args.static,
+                force=args.force,
             )
             print("Model export completed.")
             args.model = args.export_dir

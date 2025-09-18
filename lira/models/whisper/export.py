@@ -10,7 +10,7 @@ import argparse
 import shutil
 
 from onnx import shape_inference
-from lira.utils.cache import get_cache_dir
+from lira.utils.config import get_exported_cache_dir
 
 # Global variable for static shape parameters
 STATIC_PARAMS = {
@@ -60,7 +60,8 @@ def parse_args():
 
 
 def export_with_optimum_cli(model_name, output_dir, opset):
-    """Run the optimum-cli export command to generate ONNX models."""
+    """Run the optimum-cli export command to generate ONNX models, hiding stdout/stderr."""
+    # Ensure model_name is in the format 'openai/whisper-*'
     command = [
         "optimum-cli",
         "export",
@@ -72,7 +73,9 @@ def export_with_optimum_cli(model_name, output_dir, opset):
         output_dir,
     ]
     print(f"Running optimum-cli export for model: {model_name}")
-    subprocess.run(command, check=True)
+    subprocess.run(
+        command, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    )
     print(f"Exported ONNX model to: {output_dir}")
 
 
@@ -111,7 +114,7 @@ def export_whisper_model(
     """Exports the Whisper model and fixes static shapes if required."""
     # Set default output directory to project cache if not specified
     if output_dir is None:
-        output_dir = get_cache_dir() / "models" / model_name
+        output_dir = get_exported_cache_dir() / model_name
         output_dir.mkdir(parents=True, exist_ok=True)
 
     # Check if cache already exists

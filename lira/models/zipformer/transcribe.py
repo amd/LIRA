@@ -7,7 +7,7 @@ from lira.utils.config import get_provider
 from lira.utils.audio import extract_fbank
 from lira.utils.tokens import load_tokens
 from lira.utils.audio import greedy_search
-from lira.utils.cache import get_cache_dir
+from lira.utils.config import get_cache_dir
 
 CHUNK_LEN = 151
 BLANK_ID = 0
