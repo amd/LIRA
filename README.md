@@ -171,11 +171,11 @@ LIRA supports multiple speech-model architectures. Runtime support depends on th
 
 | Model                | Typical use case                        | Runs on         | Supported datatypes                |
 |----------------------|-----------------------------------------|-----------------|------------------------------------|
-| Whisper (small)      | Low-latency, resource-constrained       | CPU, GPU, NPU*  | float32, float16, int8 (quantized) |
-| Whisper (base)       | Balanced accuracy and performance       | CPU, GPU, NPU*  | float32, float16, int8 (quantized) |
-| Whisper (medium)     | Higher accuracy for challenging audio   | CPU, GPU, NPU*  | float32, float16                   |
-| Whisper (large)      | Highest accuracy (more compute)         | CPU, GPU        | float32, float16                   |
-| Zipformer            | Streaming / low-latency ASR encoder     | CPU, GPU, NPU*  | float32, float16                   |
+| Whisper (small)      | Low-latency, resource-constrained       | CPU, GPU, NPU*  | FP32, BFP16                        |
+| Whisper (base)       | Balanced accuracy and performance       | CPU, GPU, NPU*  | FP32, BFP16                        |
+| Whisper (medium)     | Higher accuracy for challenging audio   | CPU, GPU, NPU*  | FP32, BFP16                        |
+| Whisper (large)      | Highest accuracy (more compute)         | CPU, GPU        | FP32, BFP16                        |
+| Zipformer            | Streaming / low-latency ASR encoder     | CPU, GPU, NPU*  | FP32, BFP16                        |
 
 <sub>*NPU support depends on available Vitis AI export artifacts and target hardware.</sub>
 
