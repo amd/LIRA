@@ -14,7 +14,7 @@ setup(
         "torch",
         "torchaudio",
         "sounddevice",
-        "transformers==4.38.0",
+        "transformers==4.52.4",
         "soundfile",
         "gradio",
         "jiwer",

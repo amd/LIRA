@@ -17,25 +17,26 @@ LIRA is a **CLI-first, developer-friendly tool**: run and serve ASR models local
 
 - **Python 3.10** is required.
 - We recommend using **conda** for environment management.
-- For RyzenAI NPU flow, follow the [RyzenAI installation instructions](https://ryzenai.docs.amd.com/en/latest/inst.html) and verify drivers/runtime for your device.
+- For RyzenAI NPU flow, follow the [RyzenAI installation instructions](https://ryzenai.docs.amd.com/en/latest/inst.html) and verify drivers/runtime for your device. Ensure that you have a Ryzen AI 300 Series machine to nebale NPU use cases
+- Current recommended Ryzen AI Version: RAI 1.5.1 with 32.0.203.280 driver
 
 **Minimal install steps:**
 
 1. **Clone the repo and change directory:**
-        ```bash
-        git clone https://github.com/aigdat/LIRA.git
-        cd LIRA
-        ```
+    ```bash
+    git clone https://github.com/aigdat/LIRA.git
+    cd LIRA
+    ```
 
 2. **Activate your conda environment:**
-        ```bash
-        conda activate ryzen-ai-1.5.0
-        ```
+    ```bash
+    conda activate ryzen-ai-1.5.0
+    ```
 
 3. **Install LIRA in editable mode:**
-        ```bash
-        pip install -e .
-        ```
+    ```bash
+    pip install -e .
+    ```
 
 Now you can run `lira --help` to see available commands.
 
@@ -74,13 +75,13 @@ LIRA includes a FastAPI-based HTTP server for rapid integration with your applic
 **Start the server:**
 
 - **CPU acceleration:**
-        ```bash
-        lira serve --backend openai --model whisper-base --device cpu --host 0.0.0.0 --port 5000
-        ```
+    ```bash
+    lira serve --backend openai --model whisper-base --device cpu --host 0.0.0.0 --port 5000
+    ```
 - **NPU acceleration:**
-        ```bash
-        lira serve --backend openai --model whisper-base --device npu --host 0.0.0.0 --port 5000
-        ```
+    ```bash
+    lira serve --backend openai --model whisper-base --device npu --host 0.0.0.0 --port 5000
+    ```
 
 > Interested in more server features?  
 > Try the **LIRA server demo** with Open WebUI.  
@@ -178,15 +179,6 @@ LIRA supports multiple speech-model architectures. Runtime support depends on th
 | Zipformer            | Streaming / low-latency ASR encoder     | CPU, GPU, NPU*  | FP32, BFP16                        |
 
 <sub>*NPU support depends on available Vitis AI export artifacts and target hardware.</sub>
-
----
-
-## 📚 Datasets & Examples
-
-- `datasets/LibriSpeech` contains sample audio and transcripts for quick testing.  
-    Replace or augment with your own data for benchmarking.
-
----
 
 ## 🧪 Early Access & Open Source Intentions
 
