@@ -1,5 +1,6 @@
-# Copyright(C) 2025 Advanced Micro Devices, Inc. All rights reserved.
- 
+# Copyright (C) 2025, Advanced Micro Devices, Inc. All rights reserved.
+# SPDX-License-Identifier: MIT
+
 import unittest
 from lira.models.zipformer.transcribe import ZipformerONNX
 from huggingface_hub import snapshot_download

@@ -17,8 +17,8 @@ LIRA is a **CLI-first, developer-friendly tool**: run and serve ASR models local
 
 - **Python 3.10** is required.
 - We recommend using **conda** for environment management.
-- For RyzenAI NPU flow, follow the [RyzenAI installation instructions](https://ryzenai.docs.amd.com/en/latest/inst.html) and verify drivers/runtime for your device. Ensure that you have a Ryzen AI 300 Series machine to nebale NPU use cases
-- Current recommended Ryzen AI Version: RAI 1.5.1 with 32.0.203.280 driver
+- For Ryzen™ AI NPU flow, follow the [Ryzen AI installation instructions](https://ryzenai.docs.amd.com/en/latest/inst.html) and verify drivers/runtime for your device. Ensure that you have a Ryzen AI 300 Series machine to nebale NPU use cases.
+- Current recommended Ryzen AI Version: RAI 1.5.1 with 32.0.203.280 driver.
 
 **Minimal install steps:**
 
@@ -239,3 +239,5 @@ This project is licensed under the terms of the MIT license.
 See the [LICENSE](LICENSE) file for details.
 
 <sub>Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.</sub>
+
+<sub>SPDX-License-Identifier: MIT</sub>

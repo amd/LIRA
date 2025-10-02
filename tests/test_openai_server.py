@@ -1,3 +1,6 @@
+# Copyright (C) 2025, Advanced Micro Devices, Inc. All rights reserved.
+# SPDX-License-Identifier: MIT
+
 import unittest
 from fastapi.testclient import TestClient
 from lira.server.openai_server import setup_openai_server

@@ -94,3 +94,8 @@ Record from your mic or upload audio files (`.wav`, `.mp3`)—OpenWebUI will sen
 - If running behind a reverse proxy, update OpenWebUI's API Base URL accordingly.
 
 See the main [README.md](../README.md) for full LIRA setup and model export instructions.
+
+
+Copyright (C) 2025, Advanced Micro Devices, Inc. All rights reserved.
+
+SPDX-License-Identifier: MIT
