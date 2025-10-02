@@ -1,4 +1,5 @@
-# Copyright(C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2025, Advanced Micro Devices, Inc. All rights reserved.
+# SPDX-License-Identifier: MIT
 
 import argparse
 from lira.models.whisper.transcribe import WhisperONNX
