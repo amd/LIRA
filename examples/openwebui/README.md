@@ -9,16 +9,20 @@ Ready to turn your browser into a voice-powered AI playground? With LIRA and Ope
 ## 1. Set up environments
 
 **Recommended:** Use separate conda environments to avoid dependency conflicts.  
-- For LIRA, reuse `ryzen-ai-1.6.0` to leverage NPU support.  
+- For LIRA, reuse `ryzen-ai-*.*.*` to leverage NPU support, where `*.*.*` is the version number.
 - For OpenWebUI, create a new environment.
 
 ### LIRA and OpenWebUI setup:
 Follow the instructions in the [Getting Started](../README.md#getting-started) section of the main README.md to install and set up the Ryzen AI environment.
 
-Let's set up OpenWebUI by first cloning the ryzen-ai-1.6.0 environment, and then installing `open-webui`.
+Let's set up OpenWebUI by first cloning the `ryzen-ai-*.*.*` environment, and then installing `open-webui`.
 ```powershell
-conda create -n openwebui python=3.11 -y --clone ryzen-ai-1.6.0
+conda create -n openwebui python=3.11 -y --clone ryzen-ai-*.*.*
+```
+```bash
 conda activate openwebui
+```
+```bash
 pip install open-webui
 ```
 
@@ -85,7 +89,7 @@ Record from your mic or upload audio files (`.wav`, `.mp3`)—OpenWebUI will sen
 ## 📝 Notes & Tips
 
 - If you exported a Whisper ONNX model to a custom directory, set `LIRA_MODEL_DIR` before starting the server, or use `lira serve` flags to point at the export.
-- For NPU runs, start `lira serve` from `ryzen-ai-1.6.0` so Vitis AI tooling and drivers are available.
+- For NPU runs, start `lira serve` from the `ryzen-ai-*.*.*` conda environment so Vitis AI tooling and drivers are available.
 - If running behind a reverse proxy, update OpenWebUI's API Base URL accordingly.
 
 See the main [README.md](../README.md) for full LIRA setup and model export instructions.

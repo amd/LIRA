@@ -33,7 +33,7 @@ LIRA supports multiple speech-model architectures. Runtime support depends on th
 - **Python 3.11** is required.
 - We recommend using **conda** for environment management.
 - For Ryzen™ AI NPU flow, follow the [Ryzen AI installation instructions](https://ryzenai.docs.amd.com/en/latest/inst.html) and verify drivers/runtime for your device. Ensure that you have a Ryzen AI 300 Series machine to enable NPU use cases.
-- Current recommended Ryzen AI version 1.6.0 with the 32.0.203.280 NPU driver.
+- Current recommended Ryzen AI version 1.5.0 with the 32.0.203.280 NPU driver.
 
 **Minimal install steps:**
 
@@ -44,10 +44,11 @@ LIRA supports multiple speech-model architectures. Runtime support depends on th
     ```
 
 2. **Activate your conda environment:**
-This conda environment should already be installed from the Ryzen AI SW installation mentioned earlier.
+This conda environment should already be installed from the Ryzen AI SW installation mentioned earlier. 
     ```bash
-    conda activate ryzen-ai-1.6.0
+    conda activate ryzen-ai-*.*.*
     ```
+Replace the `ryzen-ai-*.*.*` with the version number you are using, such as `ryzen-ai-1.5.0`
 
 3. **Install LIRA in editable mode:**
     ```bash
