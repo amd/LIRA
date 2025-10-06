@@ -8,7 +8,7 @@
 
 LIRA is a **CLI-first, developer-friendly tool**: run and serve ASR models locally simply with the `lira run` and `lira serve` commands to integrate with your apps and tools.
 
-
+---
 
 ## 🧩 Supported Model Architectures & Runtimes
 
@@ -24,6 +24,7 @@ LIRA supports multiple speech-model architectures. Runtime support depends on th
 
 <sub>*NPU support depends on available Vitis AI export artifacts and target hardware.</sub>
 
+---
 
 ## 🚀 Getting Started
 
