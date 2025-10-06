@@ -108,9 +108,9 @@ OpenAI API-compatible local model serving with `lira serve`.
 - Expose models as HTTP APIs for real-time transcription and seamless integration.  
 - Add speech recognition to your apps, automate workflows, or build custom endpoints using standard REST calls.
 
-    ```bash
-    lira serve --backend openai --model whisper-base --device cpu --host 0.0.0.0 --port 5000
-    ```
+```bash
+lira serve --backend openai --model whisper-base --device cpu --host 0.0.0.0 --port 5000
+```
 
 > Interested in more server features?  
 > Try the **LIRA server demo** with Open WebUI.  
