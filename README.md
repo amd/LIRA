@@ -167,6 +167,7 @@ Model and runtime configs live in `config/`:
 - [config/vitisai_config_whisper_base_encoder.json](config/vitisai_config_whisper_base_encoder.json) — Vitis AI Whisper encoder config for NPU exports
 - [config/vitisai_config_whisper_base_decoder.json](config/vitisai_config_whisper_base_decoder.json) — Vitis AI Whisper decoder config for NPU exports
 - [config/vitisai_config_zipformer_encoder.json](config/vitisai_config_zipformer_encoder.json) — Vitis AI Zipformer encoder config for NPU exports
+
 You can point to custom config files or modify those in the repo.
 
 ---
