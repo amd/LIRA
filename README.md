@@ -16,11 +16,11 @@ LIRA supports multiple speech-model architectures. Runtime support depends on th
 
 | Model                | Typical use case                        | Runs on         | Supported datatypes                |
 |----------------------|-----------------------------------------|-----------------|------------------------------------|
-| [whisper-small](https://huggingface.co/openai/whisper-small)      | Low-latency, resource-constrained       | CPU, GPU, NPU*  | FP32, BFP16                        |
-| [whisper-base](https://huggingface.co/openai/whisper-base)       | Balanced accuracy and performance       | CPU, GPU, NPU*  | FP32, BFP16                        |
-| [whisper-medium](https://huggingface.co/openai/whisper-medium)     | Higher accuracy for challenging audio   | CPU, GPU, NPU*  | FP32, BFP16                        |
-| [whisper-large-v3](https://huggingface.co/openai/whisper-large-v3)      | Highest accuracy (more compute)         | CPU, GPU        | FP32, BFP16                        |
-| [zipformer](https://huggingface.co/papers/2310.11230)            | Streaming / low-latency ASR encoder     | CPU, GPU, NPU*  | FP32, BFP16                        |
+| whisper-small     | Low-latency, resource-constrained       | CPU, NPU*  | FP32, BFP16                        |
+| whisper-base       | Balanced accuracy and performance       | CPU, NPU*  | FP32, BFP16                        |
+| whisper-medium     | Higher accuracy for challenging audio   | CPU, NPU*  | FP32, BFP16                        |
+| whisper-large-v3      | Highest accuracy (more compute)         | CPU        | FP32, BFP16                        |
+| zipformer            | Streaming / low-latency ASR encoder     | CPU, NPU*  | FP32, BFP16                        |
 
 <sub>*NPU support depends on available Vitis AI export artifacts and target hardware.</sub>
 
@@ -33,7 +33,7 @@ LIRA supports multiple speech-model architectures. Runtime support depends on th
 - **Python 3.11** is required.
 - We recommend using **conda** for environment management.
 - For Ryzen™ AI NPU flow, follow the [Ryzen AI installation instructions](https://ryzenai.docs.amd.com/en/latest/inst.html) and verify drivers/runtime for your device. Ensure that you have a Ryzen AI 300 Series machine to enable NPU use cases.
-- Current recommended Ryzen AI version 1.5.0 with the 32.0.203.280 NPU driver.
+- Current recommended Ryzen AI version 1.6.0 with the 32.0.203.280 NPU driver.
 
 **Minimal install steps:**
 
@@ -48,7 +48,7 @@ This conda environment should already be installed from the Ryzen AI SW installa
     ```bash
     conda activate ryzen-ai-*.*.*
     ```
-Replace the `ryzen-ai-*.*.*` with the version number you are using, such as `ryzen-ai-1.5.0`
+Replace the `ryzen-ai-*.*.*` with the version number you are using, such as `ryzen-ai-1.6.0`
 
 3. **Install LIRA in editable mode:**
     ```bash
@@ -61,41 +61,31 @@ You can run `lira --help` to see available commands.
 
 ## ⚡ CLI-first Design
 
-LIRA is a CLI-first toolkit focused on simple developer workflows for exporting, running, and serving speech models.
+LIRA is a CLI-first toolkit focused on simple developer workflows for exporting, running, and serving speech models. You can run your own model locally, or host an OpenAI API-compatible server for any app you want to use on top of LIRA.
 
-**Primary commands:**
+**Quick examples:**
 
-1. Run models locally with `lira run`:
-
-- Run, export, or benchmark models locally directly from the command line.  
-- Use for local inference, ONNX export, or rapid prototyping.
 ```bash
 lira run whisper --model-type whisper-base --export --device cpu --audio audio_files/test.wav
 ```
+✅ To learn more about `lira run`, visit the detailed [Running Models with `lira run`](#-running-models-with-lira-run) section.
 
-2. OpenAI API-compatible local model serving with `lira serve`:
-
-- Launch and serve the model with a FastAPI server with OpenAI API-compatible endpoints.  
-- Expose models as HTTP APIs for real-time transcription and seamless integration.  
-- Add speech recognition to your apps, automate workflows, or build custom endpoints using standard REST calls.
 ```bash
 lira serve --backend openai --model whisper-base --device cpu --host 0.0.0.0 --port 5000
 ```
 
+✅ To learn more about `lira serve`, visit the detailed [LIRA Server](#️-lira-server) section.
+
 **NPU Acceleration:**
 
-For NPU acceleration, change `--device cpu` to `--device npu`.
-
-> Interested in more server features?  
-> Try the **LIRA server demo** with Open WebUI.  
-> See [examples/openwebui](examples/openwebui) for setup instructions.
-
-- Configure models via `config/model_config.json`.
-- Set API keys (dummy) as environment variables for protected backends.
+🕙 For NPU acceleration, change `--device cpu` to `--device npu`.
 
 ---
 
 ## 🏃 Running Models with `lira run`
+
+- Run, export, or benchmark models locally directly from the command line.  
+- Use for local inference, ONNX export, or rapid prototyping.
 
 To run a model using the CLI:
 ```bash
@@ -110,6 +100,25 @@ Replace `<model>` with the model name or path.
 - `--profile` — enable timing/profiling output
 
 _Tip: run `lira run <model> --help` for model-specific flags._
+
+---
+## 🖥️ LIRA Server
+OpenAI API-compatible local model serving with `lira serve`.
+- Launch and serve the model with a FastAPI server with OpenAI API-compatible endpoints.  
+- Expose models as HTTP APIs for real-time transcription and seamless integration.  
+- Add speech recognition to your apps, automate workflows, or build custom endpoints using standard REST calls.
+
+    ```bash
+    lira serve --backend openai --model whisper-base --device cpu --host 0.0.0.0 --port 5000
+    ```
+
+> Interested in more server features?  
+> Try the **LIRA server demo** with Open WebUI.  
+> See [examples/openwebui](examples/openwebui) for setup instructions.
+
+- Configure models via [config/model_config.json](config/model_config.json).
+- Set API keys (dummy) as environment variables for protected backends.
+
 
 ---
 
