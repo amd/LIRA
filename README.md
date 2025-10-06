@@ -87,7 +87,7 @@ For NPU acceleration, change `--device cpu` to `--device npu`.
 
 > Interested in more server features?  
 > Try the **LIRA server demo** with Open WebUI.  
-> See [docs/OpenWebUI_README.md](docs/OpenWebUI_README.md) for setup instructions.
+> See [examples/openwebui](examples/openwebui) for setup instructions.
 
 - Configure models via `config/model_config.json`.
 - Set API keys (dummy) as environment variables for protected backends.
