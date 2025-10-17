@@ -1,7 +1,7 @@
 # LIRA: Local Inference tool for Realtime Audio
 <p align="center">
     <p align="center">
-        <img src="images/logo.png" alt="LIRA logo" width="1280" style="border-radius:24px; height:400px; object-fit:cover;">
+        <img src="images/logo.png" alt="LIRA logo" width="640" style="border-radius:24px; height:400px; object-fit:cover;">
     </p>
 
 **Local, efficient speech recognition.  
