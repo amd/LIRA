@@ -12,8 +12,8 @@ setup(
     install_requires=[
         # "numpy",
         # "onnxruntime",
-        "torch",
-        "torchaudio",
+        "torch==2.8.0",
+        "torchaudio==2.8.0",
         "sounddevice",
         "transformers==4.52.4",
         "soundfile",
