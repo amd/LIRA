@@ -6,6 +6,7 @@ import onnxruntime as ort
 from transformers import WhisperFeatureExtractor, WhisperTokenizer
 import time
 import json
+import os
 import torchaudio
 from pathlib import Path
 from jiwer import wer, cer
@@ -318,10 +319,11 @@ class WhisperONNX:
 
         # Load providers based on device
         whisper = WhisperONNX(
-            encoder_path=f"{args.model}/encoder_model.onnx",
-            decoder_path=f"{args.model}/decoder_model.onnx",
-            decoder_init_path=f"{args.model}/decoder_init_model.onnx",
-            decoder_past_path=f"{args.model}/decoder_with_past_model.onnx",
+            encoder_path = (Path(args.model) / "encoder_model.onnx").resolve().as_posix(),
+            decoder_path = (Path(args.model) / "decoder_model.onnx").resolve().as_posix(),
+            decoder_init_path = (Path(args.model) / "decoder_init_model.onnx").resolve().as_posix(),
+            decoder_past_path = (Path(args.model) / "decoder_with_past_model.onnx").resolve().as_posix(),
+
             encoder_provider=get_provider(
                 args.device, args.model_type, "encoder", cache_dir=args.cache
             ),
