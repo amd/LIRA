@@ -146,13 +146,12 @@ def export_whisper_model(
     """Exports and statically fixes ONNX models for Whisper pipeline."""
     if output_dir is None:
         output_dir = get_exported_cache_dir() / model_name
-    
+
     output_dir = Path(output_dir)
     if output_dir.exists() and not force:
         print(f"Cache already exists at {output_dir}. Use --force to overwrite.")
         return
-    
-    
+
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Optional: export with optimum
