@@ -30,7 +30,7 @@ LIRA is a **CLI-first, developer-friendly tool**: run and serve ASR models local
 
 2. **Activate your conda environment:**
     ```bash
-    conda activate ryzen-ai-1.5.0
+    conda activate ryzen-ai-1.6.0
     ```
 
 3. **Install LIRA in editable mode:**
