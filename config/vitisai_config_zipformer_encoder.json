@@ -8,12 +8,20 @@
             "name": "vaiml_partition",
             "plugin": "vaip-pass_vaiml_partition",
             "vaiml_config": {
-                "keep_outputs": false,
-                "optimize_level": 2,
-                "fe_experiment": "prefer-conv-to-gemm-conversion=1 enable-gather-elements-adf=1 enable-edge-reshape-unwrapping=0",
-                "preferred_data_storage": "unvectorized",
-                "threshold_gops_percent": 0
+                "optimize_level": 3,
+                "fe_experiment": "use-accurate-mode=LayerNorm2PassAdf",
+                "aiecompiler_args": "--system-stack-size=512"
             }
+        }
+    ],
+    "target": "VAIML",
+    "targets": [
+        {
+            "name": "VAIML",
+            "pass": [
+                "init",
+                "vaiml_partition"
+            ]
         }
     ]
 }
