@@ -146,34 +146,28 @@ def export_whisper_model(
     """Exports and statically fixes ONNX models for Whisper pipeline."""
     if output_dir is None:
         output_dir = get_exported_cache_dir() / model_name
+    
     output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-
     if output_dir.exists() and not force:
         print(f"Cache already exists at {output_dir}. Use --force to overwrite.")
         return
+    
+    
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     # Optional: export with optimum
-    # export_with_optimum_cli(model_name, str(output_dir), opset)
+    export_with_optimum_cli(model_name, str(output_dir), opset)
 
     params_to_fix = STATIC_PARAMS if static else STATIC_PARAMS
     encoder_model = output_dir / "encoder_model.onnx"
     decoder_model = output_dir / "decoder_model.onnx"
     decoder_init_model = output_dir / "decoder_init_model.onnx"
 
-    static_dir = output_dir.parent / f"{output_dir.name}_static"
-    static_dir.mkdir(parents=True, exist_ok=True)
-
-    if encoder_model.exists():
-        force_set_static(
-            encoder_model, static_dir / "encoder_model.onnx", params_to_fix
-        )
-
     if decoder_model.exists():
         shutil.copy(decoder_model, decoder_init_model)
         force_set_static(decoder_init_model, decoder_init_model, STATIC_PARAMS_KV)
         force_set_static(
-            decoder_model, static_dir / "decoder_model.onnx", STATIC_PARAMS
+            decoder_model, output_dir / "decoder_model.onnx", STATIC_PARAMS
         )
 
     print("Model export and static shape conversion completed successfully.")
