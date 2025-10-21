@@ -34,16 +34,26 @@ STATIC_PARAMS_KV = {
 # Argument parsing
 # ----------------------------------------------------------------------
 def parse_args():
-    parser = argparse.ArgumentParser(description="Export and fix ONNX models for Whisper")
+    parser = argparse.ArgumentParser(
+        description="Export and fix ONNX models for Whisper"
+    )
     parser.add_argument(
         "--model_name",
         required=True,
         help="Model name (e.g., openai/whisper-base.en, openai/whisper-medium, etc.)",
     )
-    parser.add_argument("--output_dir", help="Directory to save the exported ONNX models")
-    parser.add_argument("--opset", type=int, default=17, help="ONNX opset version (default: 17)")
-    parser.add_argument("--static", action="store_true", help="Use static shape parameters")
-    parser.add_argument("--force", action="store_true", help="Force re-export even if cache exists")
+    parser.add_argument(
+        "--output_dir", help="Directory to save the exported ONNX models"
+    )
+    parser.add_argument(
+        "--opset", type=int, default=17, help="ONNX opset version (default: 17)"
+    )
+    parser.add_argument(
+        "--static", action="store_true", help="Use static shape parameters"
+    )
+    parser.add_argument(
+        "--force", action="store_true", help="Force re-export even if cache exists"
+    )
 
     args = parser.parse_args()
 
@@ -72,7 +82,9 @@ def export_with_optimum_cli(model_name, output_dir, opset):
         output_dir,
     ]
     print(f"Running optimum-cli export for model: {model_name}")
-    subprocess.run(command, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(
+        command, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    )
     print(f"Exported ONNX model to: {output_dir}")
 
 
@@ -124,10 +136,13 @@ def force_set_static(model_path, output_path, mapping):
     print(f"Saved static ONNX model to {output_path}")
     print(f"   External tensor data stored at {datafile_name}")
 
+
 # ----------------------------------------------------------------------
 # Whisper model export workflow
 # ----------------------------------------------------------------------
-def export_whisper_model(model_name, output_dir=None, opset=17, static=False, force=False):
+def export_whisper_model(
+    model_name, output_dir=None, opset=17, static=False, force=False
+):
     """Exports and statically fixes ONNX models for Whisper pipeline."""
     if output_dir is None:
         output_dir = get_exported_cache_dir() / model_name
@@ -150,12 +165,16 @@ def export_whisper_model(model_name, output_dir=None, opset=17, static=False, fo
     static_dir.mkdir(parents=True, exist_ok=True)
 
     if encoder_model.exists():
-        force_set_static(encoder_model, static_dir / "encoder_model.onnx", params_to_fix)
+        force_set_static(
+            encoder_model, static_dir / "encoder_model.onnx", params_to_fix
+        )
 
     if decoder_model.exists():
         shutil.copy(decoder_model, decoder_init_model)
         force_set_static(decoder_init_model, decoder_init_model, STATIC_PARAMS_KV)
-        force_set_static(decoder_model, static_dir / "decoder_model.onnx", STATIC_PARAMS)
+        force_set_static(
+            decoder_model, static_dir / "decoder_model.onnx", STATIC_PARAMS
+        )
 
     print("Model export and static shape conversion completed successfully.")
 
