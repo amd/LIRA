@@ -19,15 +19,15 @@ setup(
         "soundfile",
         "gradio",
         "jiwer",
-        #dev tools
+        # dev tools
         "onnx",
-        "optimum==1.26.1"
+        "optimum==1.26.1",
     ],
     python_requires=">=3.7",
     entry_points={
         "console_scripts": [
             "run_asr=lira.scripts.run_asr:main",
-            "lira=lira.cli:main", 
+            "lira=lira.cli:main",
         ],
     },
 )

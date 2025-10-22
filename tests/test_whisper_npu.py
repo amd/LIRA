@@ -8,6 +8,7 @@ from lira.models.whisper.transcribe import WhisperONNX
 from lira.models.whisper.export import export_whisper_model
 from lira.utils.config import get_provider
 
+
 class TestWhisperONNX(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -19,7 +20,7 @@ class TestWhisperONNX(unittest.TestCase):
             output_dir=cls.export_dir,
             opset=17,
             static=True,
-            force=True
+            force=True,
         )
 
         cls._encoder = os.path.join(cls.export_dir, "encoder_model.onnx")
@@ -40,15 +41,25 @@ class TestWhisperONNX(unittest.TestCase):
             decoder_path=self._decoder,
             decoder_init_path=self._decoder_init,
             decoder_past_path=self._decoder_past,
-            encoder_provider=get_provider(device, model, "encoder", cache_dir=self.export_dir + "_vitisai_cache"),
-            decoder_provider=get_provider("cpu", model, "decoder", cache_dir=self.export_dir + "_vitisai_cache"),
-            decoder_init_provider=get_provider("cpu", model, "decoder_init", cache_dir=self.export_dir + "_vitisai_cache"),
-            use_kv_cache=True
+            encoder_provider=get_provider(
+                device, model, "encoder", cache_dir=self.export_dir + "_vitisai_cache"
+            ),
+            decoder_provider=get_provider(
+                "cpu", model, "decoder", cache_dir=self.export_dir + "_vitisai_cache"
+            ),
+            decoder_init_provider=get_provider(
+                "cpu",
+                model,
+                "decoder_init",
+                cache_dir=self.export_dir + "_vitisai_cache",
+            ),
+            use_kv_cache=True,
         )
         transcription, _ = whisper.transcribe(audio_path)
         print(transcription)
         self.assertIsInstance(transcription, str)
         self.assertGreater(len(transcription), 0)
+
 
 if __name__ == "__main__":
     unittest.main()

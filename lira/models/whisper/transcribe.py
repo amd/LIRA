@@ -241,7 +241,7 @@ class WhisperONNX:
         whisper_parser.add_argument(
             "--device",
             default="cpu",
-            choices=["cpu", "npu", "igpu"],
+            choices=["cpu", "npu", "gpu"],
             help="Device to run the model on (default: cpu)",
         )
         whisper_parser.add_argument(
