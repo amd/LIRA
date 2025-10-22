@@ -34,7 +34,7 @@ LIRA supports multiple speech-model architectures. Runtime support depends on th
 
 - **Python 3.10** is required.
 - We recommend using **conda** for environment management.
-- To use Ryzen AI powered NPUs, you must have a RYzen AI 300 series laptop.
+- To use Ryzen AI powered NPUs, you must have a Ryzen AI 300 series laptop.
 - For RyzenAI NPU flow, follow the [RyzenAI installation instructions](https://ryzenai.docs.amd.com/en/latest/inst.html) and verify drivers/runtime for your device.
 - Requires **Ryzen AI 1.6.0 or above**
 
