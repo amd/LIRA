@@ -7,6 +7,7 @@ from lira.models.whisper.export import export_whisper_model
 import os
 import torchaudio
 
+
 class TestWhisperONNX(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -17,7 +18,7 @@ class TestWhisperONNX(unittest.TestCase):
             output_dir=cls.export_dir,
             opset=17,
             static=True,
-            force=True
+            force=True,
         )
 
         cls._encoder = os.path.join(cls.export_dir, "encoder_model.onnx")
@@ -34,7 +35,7 @@ class TestWhisperONNX(unittest.TestCase):
             decoder_path=self._decoder,
             encoder_provider=["CPUExecutionProvider"],
             decoder_provider=["CPUExecutionProvider"],
-            decoder_init_provider=["CPUExecutionProvider"]
+            decoder_init_provider=["CPUExecutionProvider"],
         )
         transcription, _ = whisper.transcribe(audio_path)
         print(transcription)
@@ -52,12 +53,13 @@ class TestWhisperONNX(unittest.TestCase):
             encoder_provider=["CPUExecutionProvider"],
             decoder_provider=["CPUExecutionProvider"],
             decoder_init_provider=["CPUExecutionProvider"],
-            use_kv_cache=True
+            use_kv_cache=True,
         )
         transcription, _ = whisper.transcribe(audio_path)
         print(transcription)
         self.assertIsInstance(transcription, str)
         self.assertGreater(len(transcription), 0)
+
 
 if __name__ == "__main__":
     unittest.main()

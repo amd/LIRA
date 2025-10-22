@@ -11,10 +11,9 @@ import os
 class TestOpenAIServerReal(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-       
+
         cls.app = setup_openai_server("whisper-base.en", "cpu")
         cls.client = TestClient(cls.app)
-        openai_server.load_model()
 
     def test_transcribe_sample_wav(self):
         sample_path = os.path.join("audio_files", "test.wav")

@@ -6,6 +6,7 @@ from lira.models.whisper.transcribe import WhisperONNX, export_whisper_model
 from pathlib import Path
 from lira.utils.config import get_provider, get_cache_dir
 
+
 class WhisperService:
     def __init__(self, model_type: str, device: str):
         self.model_type = model_type
@@ -21,7 +22,9 @@ class WhisperService:
         output_dir = cache_dir / self.model_type
 
         if not output_dir.exists():
-            print(f"Exporting model {self.model_type} for device {self.device} to {output_dir}...")
+            print(
+                f"Exporting model {self.model_type} for device {self.device} to {output_dir}..."
+            )
             export_whisper_model(
                 model_name=self.model_type,
                 output_dir=str(output_dir),
@@ -29,7 +32,9 @@ class WhisperService:
                 static=True,
             )
         else:
-            print(f"Model {self.model_type} already exists in cache. Reusing cached model.")
+            print(
+                f"Model {self.model_type} already exists in cache. Reusing cached model."
+            )
         self.model_dir = str(output_dir)
         self._load_model()
 
@@ -54,6 +59,7 @@ class WhisperService:
         transcription, _ = self.model.transcribe(wav_path)
         return transcription
 
+
 def create_app(model_type: str, device: str):
     app = FastAPI()
     whisper_service = WhisperService(model_type, device)
@@ -65,7 +71,7 @@ def create_app(model_type: str, device: str):
     async def transcribe(
         file: UploadFile,
         model: str = Form(...),
-        svc: WhisperService = Depends(get_whisper_service)
+        svc: WhisperService = Depends(get_whisper_service),
     ):
         if model not in ["whisper-1", "whisper-onnx"]:
             return JSONResponse({"error": "Unsupported model"}, status_code=400)
@@ -81,6 +87,7 @@ def create_app(model_type: str, device: str):
             os.remove(tmp_path)
 
     return app
+
 
 # Entry function (to match your OpenAI-style signature)
 def setup_openai_server(model_type: str, device: str):

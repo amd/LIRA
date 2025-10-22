@@ -51,7 +51,7 @@ def get_provider(
         tuple: A tuple containing the list of providers and provider options.
     """
     # Normalize model name for variations like whisper-base, whisper-small, etc.
-        
+
     if model.startswith("whisper"):
         cache_key_startswith = model.replace("-", "_")
         model = "whisper"
@@ -92,8 +92,8 @@ def get_provider(
         }
 
         return [("VitisAIExecutionProvider", options)]
-    
-    if device =="gpu":
+
+    if device == "gpu":
         return ["DmlExecutionProvider"]
 
     # Simplify CPU case to return only the list of providers
