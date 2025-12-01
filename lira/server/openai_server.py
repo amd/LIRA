@@ -1,3 +1,6 @@
+# Copyright (C) 2025, Advanced Micro Devices, Inc. All rights reserved.
+# SPDX-License-Identifier: MIT
+
 from fastapi import FastAPI, UploadFile, Form, Depends
 from fastapi.responses import JSONResponse
 import tempfile
