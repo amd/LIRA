@@ -12,7 +12,7 @@ def serve():
     parser.add_argument("serve", help="Run server", nargs="?")
     parser.add_argument(
         "--backend",
-        choices=["openai", "deepgram"],
+        choices=["openai"],
         required=True,
         help="Choose which API style to expose",
     )

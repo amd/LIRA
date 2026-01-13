@@ -6,6 +6,7 @@ from lira.models.zipformer.transcribe import ZipformerONNX
 from huggingface_hub import snapshot_download
 import os
 
+
 class TestZipformerONNX(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -22,12 +23,13 @@ class TestZipformerONNX(unittest.TestCase):
             decoder_path=self.decoder_path,
             joiner_path=self.joiner_path,
             tokens=self.tokens_path,
-            device="cpu"
+            device="cpu",
         )
         transcription = zipformer.transcribe("audio_files/test.wav")
 
         self.assertIsInstance(transcription, str)
         self.assertGreater(len(transcription), 0)
+
 
 if __name__ == "__main__":
     unittest.main()
