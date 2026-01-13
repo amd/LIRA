@@ -18,11 +18,11 @@ jobs:
     runs-on: [self-hosted]
     steps:
       - name: Create heartbeat file
-        shell: bash
+        shell: pwsh
         run: |
-          timestamp=$(date -Iseconds)
-          runner="${{ runner.name }}"
-          echo "$timestamp" > "heartbeat-$runner.txt"
+          $timestamp = Get-Date -Format "yyyy-MM-ddTHH:mm:ssK"
+          $runner = "${{ runner.name }}"
+          "$timestamp" | Out-File -FilePath "heartbeat-$runner.txt" -Encoding utf8
 
       - name: Upload heartbeat artifact
         uses: actions/upload-artifact@v4
