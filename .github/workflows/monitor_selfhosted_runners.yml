@@ -2,13 +2,8 @@ name: Monitor Self-Hosted Runners
 
 on:
   schedule:
-    - cron: "0 1 * * 1"   # every Monday at 1AM UTC
+    - cron: "0 4 * * 0"    # every Sunday at 4AM UTC
   workflow_dispatch:
-  push:
-    branches: 
-      - vgodsoe/monitor-runners  # Temporary: remove before merging
-    paths:
-      - '.github/workflows/monitor_selfhosted_runners.yml'
 
 jobs:
   check:
