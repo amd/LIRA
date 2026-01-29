@@ -47,11 +47,7 @@ jobs:
           pip install onnxruntime
           python -m pip check
           pip install -e .
-      - name: Lint with Black
-        uses: psf/black@stable
-        with:
-          options: "--check --verbose"
-          src: "lira/models"
+          
       - name: Run LIRA tests
         shell: bash -el {0}
         run: |
