@@ -47,62 +47,32 @@ jobs:
       - name: Get artifacts
         id: artifacts
         run: |
-          # Initialize empty artifacts file
+          # Fetch all artifacts with pagination
           echo '{"artifacts":[]}' > artifacts.json
-          
           page=1
-          per_page=100
-          
           while true; do
-            echo "Fetching artifacts page $page..."
-            
-            # Fetch current page
             response=$(curl -s \
-              -w "%{http_code}" \
               -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-              "https://api.github.com/repos/${{ github.repository }}/actions/artifacts?page=$page&per_page=$per_page")
+              "https://api.github.com/repos/${{ github.repository }}/actions/artifacts?per_page=100&page=$page")
             
-            # Extract status code and response body
-            http_code="${response: -3}"
-            response_body="${response%???}"
+            # Check if request was successful and has artifacts
+            artifact_count=$(echo "$response" | jq '.artifacts | length')
             
-            if [ "$http_code" != "200" ]; then
-              echo "API request failed with status $http_code"
-              echo "Response: $response_body"
-              exit 1
-            fi
-            
-            # Save current page to temp file
-            echo "$response_body" > "page_$page.json"
-            
-            # Check if this page has artifacts
-            artifact_count=$(echo "$response_body" | jq '.artifacts | length')
-            echo "Found $artifact_count artifacts on page $page"
-            
-            # If no artifacts on this page, we're done
-            if [ "$artifact_count" -eq 0 ]; then
-              echo "No more artifacts found, stopping pagination"
+            if [ "$artifact_count" -eq 0 ] || [ "$artifact_count" = "null" ]; then
               break
             fi
             
-            # Merge this page's artifacts with our combined file
-            jq -s '{artifacts: (.[0].artifacts + .[1].artifacts)}' artifacts.json "page_$page.json" > artifacts_temp.json
-            mv artifacts_temp.json artifacts.json
-            
-            # If we got fewer artifacts than per_page, this is the last page
-            if [ "$artifact_count" -lt "$per_page" ]; then
-              echo "Last page reached (fewer than $per_page artifacts)"
-              break
-            fi
+            # Merge artifacts into our main file
+            jq -s '.[0].artifacts + .[1].artifacts | {"artifacts": .}' artifacts.json <(echo "$response") > temp.json
+            mv temp.json artifacts.json
             
             page=$((page + 1))
+            
+            # Safety break after 10 pages (1000 artifacts)
+            if [ $page -gt 10 ]; then
+              break
+            fi
           done
-          
-          # Clean up temporary files
-          rm -f page_*.json
-          
-          total_artifacts=$(jq '.artifacts | length' artifacts.json)
-          echo "Total artifacts collected: $total_artifacts"
 
       - name: Check each runner heartbeat
         id: check
