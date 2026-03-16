@@ -33,7 +33,7 @@ jobs:
           org_names=$(jq -r '.runners[]?.name // empty' org_runners.json 2>/dev/null || echo "")
           
           # Fallback to known runner list if API fails
-          known_runners="xsjevo04"
+          known_runners="XSJEVO04"
           
           if [ -n "$repo_names" ] || [ -n "$org_names" ]; then
             all_names=$(echo -e "$repo_names\n$org_names" | sort -u | tr '\n' ',' | sed 's/,$//') 
