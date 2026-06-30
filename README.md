@@ -32,11 +32,13 @@ LIRA supports multiple speech-model architectures. Runtime support depends on th
 
 **Prerequisites:**
 
-- **Python 3.10** is required.
-- We recommend using **conda** for environment management.
-- To use Ryzen AI powered NPUs, you must have a Ryzen AI 300 series laptop.
+- **Python 3.10** is required. We recommend using **Miniforge** for environment management.
+- **Visual Studio 2022 Community** with "Desktop Development with C++" workload must be installed.
+- **CMake 3.26 or above** is required for build tooling.
+- To use Ryzen AI powered NPUs, you must have a Ryzen AI 300 series laptop running **Windows 11 build 22621.3527 or above**.
 - For RyzenAI NPU flow, follow the [RyzenAI installation instructions](https://ryzenai.docs.amd.com/en/latest/inst.html) and verify drivers/runtime for your device.
-- Requires **Ryzen AI 1.6.0 or above**
+- Compatible NPU drivers: **32.0.203.280**, **32.0.203.314**, or **376**.
+- Requires **Ryzen AI 1.7.1 or above**
 
 **Minimal install steps:**
 
@@ -48,7 +50,7 @@ LIRA supports multiple speech-model architectures. Runtime support depends on th
     ```
     For example, use the latest
     ```bash
-    conda activate ryzen-ai-1.6.0
+    conda activate ryzen-ai-1.7.1
     ```
 
 2. **Clone the repo and change directory:**
